@@ -1,0 +1,8 @@
+# Register your lib to Unikraft's build system
+$(eval $(call addlib_s,lib_so_wl,$(CONFIG_SOFTONLYWEARLEVELINGLIB)))
+
+# Add library source code to compilation
+LIBSO_WL_SRCS-y += $(LIBSO_WL_BASE)/writemonitor.c
+
+# Extend the global include paths with library's folder
+CINCLUDES-$(CONFIG_SOFTONLYWEARLEVELINGLIB) += -I$(LIBSO_WL_BASE)/include

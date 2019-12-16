@@ -1,0 +1,4 @@
+config SOFTONLYWEARLEVELINGLIB
+    bool "so_wl: Provides functionality for software only in memory wear leveling"
+    default n
+    depends on (ARCH_ARM_64)
