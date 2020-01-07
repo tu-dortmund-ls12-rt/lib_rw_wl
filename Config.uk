@@ -2,3 +2,14 @@ config SOFTONLYWEARLEVELINGLIB
     bool "so_wl: Provides functionality for software only in memory wear leveling"
     default n
     depends on (ARCH_ARM_64)
+
+if (SOFTONLYWEARLEVELINGLIB)
+
+menu "Access Approximation"
+
+config SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE
+    int "so_wl_sampling_rate: Determines in what distance the memory accesses are sampled to approximate the access distribution"
+    default 5000
+
+endmenu
+endif

@@ -11,6 +11,7 @@ unsigned int irq_count = 0;
 int uk_so_wl_writemonitor_handle_overflow(void* arg) {
     printf("Interrupt!\n");
     irq_count++;
+    arm64_pmc_write_event_counter(0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
 
     // Signal everything was fine
     return 1;
@@ -34,15 +35,5 @@ void uk_so_wl_writemonitor_init() {
 
     asm volatile("msr daifclr, #0b1111");
 
-    arm64_pmc_write_event_counter(0, 0xFFFFFFFF - 5);
-
-    uint32_t v1 = arm64_pmc_read_event_counter(0);
-    uint32_t p0 = gic_is_irq_pending(320);
-    printf("TEST!\n");
-    uint32_t v2 = arm64_pmc_read_event_counter(0);
-    uint32_t p1 = gic_is_irq_pending(320);
-    printf("TEST!\n");
-    printf("TEST!\n");
-    printf("V1 %u, V2 %u, IC %u\n", v1, v2, irq_count);
-    printf("P0 %u, P1 %u\n", p0, p1);
+    arm64_pmc_write_event_counter(0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
 }
