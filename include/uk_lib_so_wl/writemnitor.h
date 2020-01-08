@@ -15,3 +15,8 @@
 #pragma once
 
 void uk_so_wl_writemonitor_init();
+void uk_so_wl_writemonitor_set_monitor_offset(unsigned long offset);
+
+void uk_so_wl_writemonitor_terminate();
+void uk_so_wl_writemonitor_plot_results();
+void uk_so_wl_writemonitor_set_page_mode(int generate_interrupts);

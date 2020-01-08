@@ -11,5 +11,13 @@ config SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE
     int "so_wl_sampling_rate: Determines in what distance the memory accesses are sampled to approximate the access distribution"
     default 5000
 
+config SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY
+    int "so_wl_sampling_rate: Defines the storage capacity for access approximations"
+    default 256
+
+config SOFTONLYWEARLEVELINGLIB_WRITE_NOTIFY_THRESHOLD
+    int "so_wl_sampling_rate: Defines at which count of approximated writes the WL should be triggered"
+    default 32
+
 endmenu
 endif

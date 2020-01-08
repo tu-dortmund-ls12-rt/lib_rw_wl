@@ -6,12 +6,16 @@
 #include <uk/plat/irq.h>
 #include <uk_lib_so_wl/writemnitor.h>
 
-unsigned int irq_count = 0;
+unsigned long
+    uk_so_wl_write_count[CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY];
+
+// This defines the offset where the monitoring starts to listen, it is usually
+// the first page of the application
+unsigned long uk_so_wl_monitor_offset = 0;
 
 int uk_so_wl_writemonitor_handle_overflow(void* arg) {
-    printf("Interrupt!\n");
-    irq_count++;
-    arm64_pmc_write_event_counter(0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
+    arm64_pmc_write_event_counter(
+        0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
 
     // Signal everything was fine
     return 1;
@@ -35,5 +39,31 @@ void uk_so_wl_writemonitor_init() {
 
     asm volatile("msr daifclr, #0b1111");
 
-    arm64_pmc_write_event_counter(0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
+    arm64_pmc_write_event_counter(
+        0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
+}
+
+void uk_so_wl_writemonitor_set_monitor_offset(unsigned long offset) {
+    uk_so_wl_monitor_offset = offset;
+}
+
+void uk_so_wl_writemonitor_terminate() {
+    gic_disable_irq(320);
+    // Set observed pages logic
+    arm64_pmc_enable_overflow_interrupt(0, 0);
+    arm64_pmc_set_event_counter_enabled(0, 0);
+}
+
+void uk_so_wl_writemonitor_plot_results() {
+    // Print out write counts for all approximated pages
+    for (unsigned long i = 0;
+         i < CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY; i++) {
+        // Print out the address and the approximation
+        printf("%x %u\n", (uk_so_wl_monitor_offset + i * 0x1000),
+               uk_so_wl_write_count[i]);
+    }
+}
+
+void uk_so_wl_writemonitor_set_page_mode(int generate_interrupts){
+    
 }
