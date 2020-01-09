@@ -16,11 +16,39 @@ unsigned long uk_so_wl_monitor_offset = 0;
 unsigned long uk_so_wl_number_pages = 0;
 
 int uk_so_wl_writemonitor_handle_overflow(void* arg) {
+    uk_so_wl_writemonitor_set_page_mode(1);
     arm64_pmc_write_event_counter(
         0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
 
     // Signal everything was fine
     return 1;
+}
+
+void uk_upper_level_page_fault_handler() {
+    // First disable the overflow interrupt to not mess up things here
+    arm64_pmc_enable_overflow_interrupt(0, 0);
+
+    // Get the causing address for the access fault
+    unsigned long far_el1;
+    asm volatile("mrs %0, far_el1", "=r"(far_el1));
+
+    // Determine faulting page
+    unsigned long number = (far_el1 - uk_so_wl_monitor_offset) >> 12;
+
+    if (number < uk_so_wl_number_pages) {
+        uk_so_wl_write_count[number]++;
+#ifdef SOFTONLYWEARLEVELINGLIB_DO_WRITE_LEVELING
+        if (uk_so_wl_write_count[number] >=
+            CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_NOTIFY_THRESHOLD) {
+            // Notify Wear Leveling
+            uk_so_wl_write_count[number] = 0;
+        }
+#endif
+    }
+    uk_so_wl_writemonitor_set_page_mode(0);
+    arm64_pmc_write_event_counter(
+        0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
+    arm64_pmc_enable_overflow_interrupt(0, 1);
 }
 
 void uk_so_wl_writemonitor_init() {

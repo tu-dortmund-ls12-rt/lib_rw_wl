@@ -2,8 +2,24 @@ config SOFTONLYWEARLEVELINGLIB
     bool "so_wl: Provides functionality for software only in memory wear leveling"
     default n
     depends on (ARCH_ARM_64)
+    select FORWARD_PAGEFAULT
 
 if (SOFTONLYWEARLEVELINGLIB)
+
+menu "Functionalities"
+
+config SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
+    bool "so_wl_write_monitoring: Determines if write minitoring is performed at all"
+    default y
+
+config SOFTONLYWEARLEVELINGLIB_DO_WRITE_LEVELING
+    bool "so_wl_write_leveling: Determines if write wear leveling is performed"
+    default y
+    select SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
+
+endmenu
+
+if (SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING)
 
 menu "Access Approximation"
 
@@ -12,12 +28,18 @@ config SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE
     default 5000
 
 config SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY
-    int "so_wl_sampling_rate: Defines the storage capacity for access approximations"
+    int "so_wl_monitor_capacity: Defines the storage capacity for access approximations"
     default 256
 
 config SOFTONLYWEARLEVELINGLIB_WRITE_NOTIFY_THRESHOLD
-    int "so_wl_sampling_rate: Defines at which count of approximated writes the WL should be triggered"
+    int "so_wl_notify_threshold: Defines at which count of approximated writes the WL should be triggered"
     default 32
 
+config SOFTONLYWEARLEVELINGLIB_PLOT_APPROXIMATION_RESULTS
+    bool "so_wl_plot_approx_results: Selects if the approximation results should be printed out after the appliction completes"
+    default n
+
 endmenu
+
+endif
 endif
