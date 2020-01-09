@@ -3,6 +3,7 @@ config SOFTONLYWEARLEVELINGLIB
     default n
     depends on (ARCH_ARM_64)
     select FORWARD_PAGEFAULT
+    select SEPARATE_CODE_LINKING
 
 if (SOFTONLYWEARLEVELINGLIB)
 

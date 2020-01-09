@@ -7,15 +7,18 @@
 #include <uk/plat/irq.h>
 #include <uk_lib_so_wl/writemnitor.h>
 
-unsigned long
-    uk_so_wl_write_count[CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY];
+#define __WL_CODE __attribute((section(".wl_text")))
+#define __WL_DATA __attribute((section(".wl_data")))
+
+unsigned long uk_so_wl_write_count
+    [CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY] __WL_DATA;
 
 // This defines the offset where the monitoring starts to listen, it is usually
 // the first page of the application
-unsigned long uk_so_wl_monitor_offset = 0;
-unsigned long uk_so_wl_number_pages = 0;
+unsigned long uk_so_wl_monitor_offset __WL_DATA = 0;
+unsigned long uk_so_wl_number_pages __WL_DATA = 0;
 
-int uk_so_wl_writemonitor_handle_overflow(void* arg) {
+int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
     uk_so_wl_writemonitor_set_page_mode(1);
     arm64_pmc_write_event_counter(
         0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
@@ -24,13 +27,13 @@ int uk_so_wl_writemonitor_handle_overflow(void* arg) {
     return 1;
 }
 
-void uk_upper_level_page_fault_handler() {
+void __WL_CODE uk_upper_level_page_fault_handler() {
     // First disable the overflow interrupt to not mess up things here
     arm64_pmc_enable_overflow_interrupt(0, 0);
 
     // Get the causing address for the access fault
     unsigned long far_el1;
-    asm volatile("mrs %0, far_el1", "=r"(far_el1));
+    asm volatile("mrs %0, far_el1" : "=r"(far_el1));
 
     // Determine faulting page
     unsigned long number = (far_el1 - uk_so_wl_monitor_offset) >> 12;
@@ -51,7 +54,7 @@ void uk_upper_level_page_fault_handler() {
     arm64_pmc_enable_overflow_interrupt(0, 1);
 }
 
-void uk_so_wl_writemonitor_init() {
+void __WL_CODE uk_so_wl_writemonitor_init() {
     /**
      * This is a generic initialization of the PMC functionality
      */
@@ -73,11 +76,12 @@ void uk_so_wl_writemonitor_init() {
         0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
 }
 
-void uk_so_wl_writemonitor_set_monitor_offset(unsigned long offset) {
+void __WL_CODE uk_so_wl_writemonitor_set_monitor_offset(unsigned long offset) {
     uk_so_wl_monitor_offset = offset;
 }
 
-void uk_so_wl_writemonitor_set_number_pages(unsigned long number_pages) {
+void __WL_CODE
+uk_so_wl_writemonitor_set_number_pages(unsigned long number_pages) {
     if (number_pages > CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY) {
         UK_CRASH(
             "Too many pages to monitor are requested. Requested %u, bot only "
@@ -87,14 +91,14 @@ void uk_so_wl_writemonitor_set_number_pages(unsigned long number_pages) {
     uk_so_wl_number_pages = number_pages;
 }
 
-void uk_so_wl_writemonitor_terminate() {
+void __WL_CODE uk_so_wl_writemonitor_terminate() {
     gic_disable_irq(320);
     // Set observed pages logic
     arm64_pmc_enable_overflow_interrupt(0, 0);
     arm64_pmc_set_event_counter_enabled(0, 0);
 }
 
-void uk_so_wl_writemonitor_plot_results() {
+void __WL_CODE uk_so_wl_writemonitor_plot_results() {
     // Print out write counts for all approximated pages
     for (unsigned long i = 0; i < uk_so_wl_number_pages; i++) {
         // Print out the address and the approximation
@@ -103,7 +107,7 @@ void uk_so_wl_writemonitor_plot_results() {
     }
 }
 
-void uk_so_wl_writemonitor_set_page_mode(int generate_interrupts) {
+void __WL_CODE uk_so_wl_writemonitor_set_page_mode(int generate_interrupts) {
     for (unsigned long i = 0; i < uk_so_wl_number_pages; i++) {
         plat_mmu_set_access_permissions(
             uk_so_wl_monitor_offset + i * 0x1000,
