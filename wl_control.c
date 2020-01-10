@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <uk_lib_so_wl/control_flow.h>
 #include <uk_lib_so_wl/wl_control.h>
 #include <uk_lib_so_wl/writemnitor.h>
 
@@ -39,7 +40,7 @@ void __WL_CODE uk_so_wl_init_wl_system() {
 #endif
 }
 
-void uk_so_wl_exit_wl_system() {
+void __WL_CODE uk_so_wl_exit_wl_system() {
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
     printf("Stopping write monitoring\n");
@@ -50,5 +51,27 @@ void uk_so_wl_exit_wl_system() {
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_PLOT_APPROXIMATION_RESULTS
     uk_so_wl_writemonitor_plot_results();
 #endif
+#endif
+}
+
+void uk_so_wl_start_benchmark_irq_stack() {
+    unsigned long sp;
+    asm volatile("mov %0, sp" : "=r"(sp));
+    printf("Running this one on the IRQ stack (0x%x)\n", sp);
+}
+
+void __WL_CODE uk_so_wl_start_benchmark(void (*entry)()) {
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
+    unsigned long sp;
+    asm volatile("mov %0, sp" : "=r"(sp));
+    printf("Switching execution to the interrupt stack, current sp is 0x%x\n",
+           sp);
+#endif
+
+    uk_so_wl_switch_to_irq_stack(uk_so_wl_start_benchmark_irq_stack);
+
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
+    asm volatile("mov %0, sp" : "=r"(sp));
+    printf("Returned from IRQ stack, back at 0x%x\n", sp);
 #endif
 }
