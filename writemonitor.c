@@ -55,6 +55,10 @@ void __WL_CODE uk_upper_level_page_fault_handler() {
 }
 
 void __WL_CODE uk_so_wl_writemonitor_init() {
+    for (unsigned long i = 0;
+         i < CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY; i++) {
+        uk_so_wl_write_count[i] = 0;
+    }
     /**
      * This is a generic initialization of the PMC functionality
      */

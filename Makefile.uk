@@ -3,6 +3,7 @@ $(eval $(call addlib_s,lib_so_wl,$(CONFIG_SOFTONLYWEARLEVELINGLIB)))
 
 # Add library source code to compilation
 LIB_SO_WL_SRCS-y += $(LIB_SO_WL_BASE)/writemonitor.c
+LIB_SO_WL_SRCS-y += $(LIB_SO_WL_BASE)/wl_control.c
 
 # Extend the global include paths with library's folder
 CINCLUDES-$(CONFIG_SOFTONLYWEARLEVELINGLIB) += -I$(LIB_SO_WL_BASE)/include

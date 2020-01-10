@@ -43,4 +43,13 @@ config SOFTONLYWEARLEVELINGLIB_PLOT_APPROXIMATION_RESULTS
 endmenu
 
 endif
+
+menu "Options"
+
+config SOFTONLYWEARLEVELINGLIB_LOGGING
+    bool "so_wl_logging: Determines if logging outputs are made for the wear leveling lib"
+    default n
+
+endmenu
+
 endif
