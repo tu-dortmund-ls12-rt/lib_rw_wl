@@ -6,3 +6,4 @@
  * stack and the function returns normally (at least i hope so)
  */
 void uk_so_wl_switch_to_irq_stack(void (*call_param)());
+void uk_so_wl_switch_to_el0(void (*call_param)());

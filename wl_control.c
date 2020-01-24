@@ -1,3 +1,4 @@
+#include <arm/arm64/mmu.h>
 #include <stdio.h>
 #include <uk_lib_so_wl/control_flow.h>
 #include <uk_lib_so_wl/wl_control.h>
@@ -54,10 +55,37 @@ void __WL_CODE uk_so_wl_exit_wl_system() {
 #endif
 }
 
-void uk_so_wl_start_benchmark_irq_stack() {
+void __WL_CODE uk_so_wl_start_benchmark_el0() {
+    while (1)
+        ;
+}
+
+void __WL_CODE uk_so_wl_start_benchmark_irq_stack() {
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
     unsigned long sp;
     asm volatile("mov %0, sp" : "=r"(sp));
-    printf("Running this one on the IRQ stack (0x%x)\n", sp);
+    printf("Ececuting C on the IRQ stack (0x%x)\n", sp);
+#endif
+
+    // Now we are switching to EL0, the function actually will retun due to some
+    // dirty hack
+
+    uk_so_wl_switch_to_el0(uk_so_wl_start_benchmark_el0);
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
+    unsigned long current_el;
+    asm volatile("mrs %0, currentel" : "=r"(current_el));
+    printf("Returned from EL jump (now on on EL %d)\n", current_el >> 2);
+#endif
+}
+
+void __WL_CODE uk_so_wl_prepare_wl_code_permissions() {
+    extern unsigned long __WL_TEXT_SECTION_BEGIN;
+    extern unsigned long __WL_TEXT_SECTION_END;
+
+    for (unsigned long page = (unsigned long)(&__WL_TEXT_SECTION_BEGIN);
+         page < (unsigned long)(&__WL_TEXT_SECTION_END); page += 0x1000) {
+        plat_mmu_set_access_permissions(page, PLAT_MMU_PERMISSION_RW_FROM_OS);
+    }
 }
 
 void __WL_CODE uk_so_wl_start_benchmark(void (*entry)()) {
@@ -67,6 +95,8 @@ void __WL_CODE uk_so_wl_start_benchmark(void (*entry)()) {
     printf("Switching execution to the interrupt stack, current sp is 0x%x\n",
            sp);
 #endif
+
+    uk_so_wl_prepare_wl_code_permissions();
 
     uk_so_wl_switch_to_irq_stack(uk_so_wl_start_benchmark_irq_stack);
 
