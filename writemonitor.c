@@ -17,6 +17,7 @@ unsigned long uk_so_wl_write_count
 // the first page of the application
 unsigned long uk_so_wl_monitor_offset __WL_DATA = 0;
 unsigned long uk_so_wl_number_pages __WL_DATA = 0;
+unsigned long uk_so_wl_number_text_pages __WL_DATA = 0;
 
 int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
     uk_so_wl_writemonitor_set_page_mode(1);
@@ -30,6 +31,8 @@ int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
 void __WL_CODE uk_upper_level_page_fault_handler() {
     // First disable the overflow interrupt to not mess up things here
     arm64_pmc_enable_overflow_interrupt(0, 0);
+
+    uk_so_wl_writemonitor_set_page_mode(0);
 
     // Get the causing address for the access fault
     unsigned long far_el1;
@@ -48,7 +51,6 @@ void __WL_CODE uk_upper_level_page_fault_handler() {
         }
 #endif
     }
-    uk_so_wl_writemonitor_set_page_mode(0);
     arm64_pmc_write_event_counter(
         0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
     arm64_pmc_enable_overflow_interrupt(0, 1);
@@ -66,7 +68,7 @@ void __WL_CODE uk_so_wl_writemonitor_init() {
     arm64_pmc_set_event_counter_enabled(0, 1);
     arm64_pmc_set_count_event(0, ARM64_PMC_BUS_ACCESS_STORE);
     arm64_pmc_set_non_secure_el0_counting(0, 1);
-    arm64_pmc_set_non_secure_el1_counting(0, 1);
+    arm64_pmc_set_non_secure_el1_counting(0, 0);
     arm64_pmc_enable_overflow_interrupt(0, 1);
 
     int rc = ukplat_irq_register(320, uk_so_wl_writemonitor_handle_overflow, 0);
@@ -95,6 +97,10 @@ uk_so_wl_writemonitor_set_number_pages(unsigned long number_pages) {
     uk_so_wl_number_pages = number_pages;
 }
 
+void __WL_CODE uk_so_wl_writemonitor_set_text_size(unsigned long number_pages) {
+    uk_so_wl_number_text_pages = number_pages;
+}
+
 void __WL_CODE uk_so_wl_writemonitor_terminate() {
     gic_disable_irq(320);
     // Set observed pages logic
@@ -112,10 +118,26 @@ void __WL_CODE uk_so_wl_writemonitor_plot_results() {
 }
 
 void __WL_CODE uk_so_wl_writemonitor_set_page_mode(int generate_interrupts) {
+    // printf("No %d\n", uk_so_wl_number_text_pages);
     for (unsigned long i = 0; i < uk_so_wl_number_pages; i++) {
-        plat_mmu_set_access_permissions(
-            uk_so_wl_monitor_offset + i * 0x1000,
-            generate_interrupts ? PLAT_MMU_PERMISSION_R_FROM_OS_USER
-                                : PLAT_MMU_PERMISSION_RW_FROM_OS_USER);
+        // printf("PW: 0x%x %d ", uk_so_wl_monitor_offset + i * 0x1000,
+        //        plat_mmu_get_access_permissions(uk_so_wl_monitor_offset +
+        //                                        i * 0x1000));
+
+        if (i < uk_so_wl_number_text_pages) {
+            // Text is always RO
+            // plat_mmu_set_access_permissions(
+            //     uk_so_wl_monitor_offset + i * 0x1000,
+            //     generate_interrupts ? PLAT_MMU_PERMISSION_R_FROM_OS_USER
+            //                         : PLAT_MMU_PERMISSION_R_FROM_OS_USER);
+        } else {
+            plat_mmu_set_access_permissions(
+                uk_so_wl_monitor_offset + i * 0x1000,
+                generate_interrupts ? PLAT_MMU_PERMISSION_R_FROM_OS_USER
+                                    : PLAT_MMU_PERMISSION_RW_FROM_OS_USER);
+        }
+        // printf("PI: 0x%x %d\n", uk_so_wl_monitor_offset + i * 0x1000,
+        //        plat_mmu_get_access_permissions(uk_so_wl_monitor_offset +
+        //                                        i * 0x1000));
     }
 }

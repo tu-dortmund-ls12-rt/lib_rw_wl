@@ -17,6 +17,7 @@
 void uk_so_wl_writemonitor_init();
 void uk_so_wl_writemonitor_set_monitor_offset(unsigned long offset);
 void uk_so_wl_writemonitor_set_number_pages(unsigned long number_pages);
+void uk_so_wl_writemonitor_set_text_size(unsigned long number_pages);
 
 void uk_so_wl_writemonitor_terminate();
 void uk_so_wl_writemonitor_plot_results();

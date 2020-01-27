@@ -14,12 +14,15 @@ void __WL_CODE uk_so_wl_init_wl_system() {
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
     extern unsigned long __NVMSYMBOL__APPLICATION_TEXT_BEGIN;
-    extern unsigned long __NVMSYMBOL__APPLICATION_BSS_END;
+    extern unsigned long __NVMSYMBOL__APPLICATION_TEXT_END;
+    extern unsigned long __NVMSYMBOL__APPLICATION_STACK_END;
 
     unsigned long start_monitoring =
         (unsigned long)(&__NVMSYMBOL__APPLICATION_TEXT_BEGIN);
+    unsigned long end_text =
+        (unsigned long)(&__NVMSYMBOL__APPLICATION_TEXT_END);
     unsigned long end_monitoring =
-        (unsigned long)(&__NVMSYMBOL__APPLICATION_BSS_END);
+        (unsigned long)(&__NVMSYMBOL__APPLICATION_STACK_END);
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
     printf(
         "Write monitoring is enabled, going to sample accesses from 0x%x to "
@@ -32,6 +35,8 @@ void __WL_CODE uk_so_wl_init_wl_system() {
     uk_so_wl_writemonitor_set_monitor_offset(start_monitoring);
     uk_so_wl_writemonitor_set_number_pages(
         (end_monitoring - start_monitoring) >> 12);
+
+    uk_so_wl_writemonitor_set_text_size((end_text - start_monitoring) >> 12);
     uk_so_wl_writemonitor_init();
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
@@ -60,6 +65,9 @@ void (*uk_so_wl_global_entry_store)();
 void __WL_CODE uk_so_wl_start_benchmark_el0() {
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
     printf("Switched down to EL0\n");
+    unsigned long sp;
+    asm volatile("mov %0, sp" : "=r"(sp));
+    printf("EL0 sp is at 0x%x\n", sp);
 #endif
 
     uk_so_wl_global_entry_store();
