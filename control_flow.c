@@ -1,5 +1,6 @@
-#include <uk_lib_so_wl/control_flow.h>
+#include <uk/arch/syscalls.h>
 #include <uk/config.h>
+#include <uk_lib_so_wl/control_flow.h>
 
 #define __WL_CODE __attribute((section(".wl_text")))
 #define __WL_DATA __attribute((section(".wl_data")))
@@ -59,10 +60,19 @@ void __WL_CODE uk_so_wl_switch_to_irq_stack(void (*call_param)()) {
 
 unsigned long uk_so_wl_intermediate_el1_sp __WL_DATA;
 
+UK_PLAT_SYSCALL_HANDLER(0x42) {
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
+    printf("Execution is back at EL1, kicking to saved state\n");
+#endif
+    asm volatile("b uk_so_wl_exit_call_mark");
+}
+
 void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
     printf("Jumping to el0 and call 0x%x\n", call_param);
 #endif
+
+    UK_PLAT_REGISTER_SYSCALL(0x42);
 
     /**
      * According to arm, only X19-X29 are callee saved, which means X0-X18 and
@@ -97,8 +107,8 @@ void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
         "bic x0, x0, #0b111;"
         "msr spsr_el1, x0;"
         "eret;"  // This will never returm, however we will have a trap handler,
-                // which kicks to exactly this location, indeed we have a fake
-                // return here
+                 // which kicks to exactly this location, indeed we have a fake
+                 // return here
         "uk_so_wl_exit_call_mark:"  // This is a faking, the sp is set back to a
                                     // previous state, so the ongoing ISR is
                                     // completely discarded. Execution continues
@@ -123,3 +133,5 @@ void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
         : "r"(call_param)
         : "x0", "x1");
 }
+
+void uk_so_wl_kick_to_el1() { asm volatile("svc #0x42"); }

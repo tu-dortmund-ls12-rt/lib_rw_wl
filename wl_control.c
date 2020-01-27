@@ -64,8 +64,7 @@ void __WL_CODE uk_so_wl_start_benchmark_el0() {
 
     uk_so_wl_global_entry_store();
 
-    while (1)
-        ;
+    uk_so_wl_kick_to_el1();
 }
 
 void __WL_CODE uk_so_wl_start_benchmark_irq_stack() {
