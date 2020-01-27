@@ -55,7 +55,15 @@ void __WL_CODE uk_so_wl_exit_wl_system() {
 #endif
 }
 
+void (*uk_so_wl_global_entry_store)();
+
 void __WL_CODE uk_so_wl_start_benchmark_el0() {
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
+    printf("Switched down to EL0\n");
+#endif
+
+    uk_so_wl_global_entry_store();
+
     while (1)
         ;
 }
@@ -95,6 +103,8 @@ void __WL_CODE uk_so_wl_start_benchmark(void (*entry)()) {
     printf("Switching execution to the interrupt stack, current sp is 0x%x\n",
            sp);
 #endif
+
+    uk_so_wl_global_entry_store = entry;
 
     uk_so_wl_prepare_wl_code_permissions();
 
