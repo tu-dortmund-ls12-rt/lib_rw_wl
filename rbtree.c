@@ -1,8 +1,12 @@
-#include <uk_lib_so_wl/rbtree.h>
 #include <stdio.h>
+#include <uk_lib_so_wl/rbtree.h>
 
-int uk_so_wl_rbtree_compare(struct uk_so_wl_rbtree_phys_page_handle node1,
-                            struct uk_so_wl_rbtree_phys_page_handle node2) {
+#define __WL_CODE __attribute((section(".wl_text")))
+#define __WL_DATA __attribute((section(".wl_data")))
+
+int __WL_CODE
+uk_so_wl_rbtree_compare(struct uk_so_wl_rbtree_phys_page_handle node1,
+                        struct uk_so_wl_rbtree_phys_page_handle node2) {
     if (node2.access_count != node1.access_count) {
         return node1.access_count - node2.access_count;
     }
@@ -10,14 +14,14 @@ int uk_so_wl_rbtree_compare(struct uk_so_wl_rbtree_phys_page_handle node1,
            node2.phys_address;  // Just to keep an absolute ordner in the tree
 }
 
-unsigned int uk_so_wl_rbtree_equals(
-    struct uk_so_wl_rbtree_phys_page_handle node1,
-    struct uk_so_wl_rbtree_phys_page_handle node2) {
+unsigned int __WL_CODE
+uk_so_wl_rbtree_equals(struct uk_so_wl_rbtree_phys_page_handle node1,
+                       struct uk_so_wl_rbtree_phys_page_handle node2) {
     return node1.access_count == node2.access_count &&
            node1.phys_address == node2.phys_address;
 }
 
-unsigned long uk_so_wl_rbtree_fast_log2(unsigned long n) {
+unsigned long __WL_CODE uk_so_wl_rbtree_fast_log2(unsigned long n) {
     static const int table[64] = {
         0,  58, 1,  59, 47, 53, 2,  60, 39, 48, 27, 54, 33, 42, 3,  61,
         51, 37, 40, 49, 18, 28, 20, 55, 30, 34, 11, 43, 14, 22, 4,  62,
@@ -34,8 +38,8 @@ unsigned long uk_so_wl_rbtree_fast_log2(unsigned long n) {
     return table[(n * 0x03f6eaf2cd271461) >> 58];
 }
 
-void uk_so_wl_rbtree_insert(struct uk_so_wl_rbtree *tree,
-                            struct uk_so_wl_rbtree_node *element) {
+void __WL_CODE uk_so_wl_rbtree_insert(struct uk_so_wl_rbtree *tree,
+                                      struct uk_so_wl_rbtree_node *element) {
     // Maximum height
     unsigned long max_height =
         2 * uk_so_wl_rbtree_fast_log2(tree->element_count + 2) - 2;
@@ -154,8 +158,8 @@ void uk_so_wl_rbtree_insert(struct uk_so_wl_rbtree *tree,
     tree->root = element;
 }
 
-void uk_so_wl_rbtree_remove(struct uk_so_wl_rbtree *tree,
-                            struct uk_so_wl_rbtree_node *element) {
+void __WL_CODE uk_so_wl_rbtree_remove(struct uk_so_wl_rbtree *tree,
+                                      struct uk_so_wl_rbtree_node *element) {
     // Find the searched node
     // Maximum height
     unsigned long max_height =
@@ -410,8 +414,8 @@ void uk_so_wl_rbtree_remove(struct uk_so_wl_rbtree *tree,
     return;
 }
 
-struct uk_so_wl_rbtree_phys_page_handle uk_so_wl_rbtree_pop_minimum(
-    struct uk_so_wl_rbtree *tree) {
+struct __WL_CODE uk_so_wl_rbtree_phys_page_handle
+uk_so_wl_rbtree_pop_minimum(struct uk_so_wl_rbtree *tree) {
     // Find the smallest node first
     // Maximum height
     unsigned long max_height =
@@ -608,7 +612,7 @@ struct uk_so_wl_rbtree_phys_page_handle uk_so_wl_rbtree_pop_minimum(
     return found_node;
 }
 
-void uk_so_wl_rbtree_print_tree(struct uk_so_wl_rbtree *tree) {
+void __WL_CODE uk_so_wl_rbtree_print_tree(struct uk_so_wl_rbtree *tree) {
     unsigned long max_height =
         2 * uk_so_wl_rbtree_fast_log2(tree->element_count + 2) - 2;
     max_height++;
@@ -624,9 +628,9 @@ void uk_so_wl_rbtree_print_tree(struct uk_so_wl_rbtree *tree) {
     printf("\n");
 }
 
-void uk_so_wl_rbtree_print_level(struct uk_so_wl_rbtree *tree,
-                                 unsigned int level, int dist,
-                                 struct uk_so_wl_rbtree_node *root) {
+void __WL_CODE uk_so_wl_rbtree_print_level(struct uk_so_wl_rbtree *tree,
+                                           unsigned int level, int dist,
+                                           struct uk_so_wl_rbtree_node *root) {
     if (level == 0) {
         for (int i = 0; i < dist - 1; i++) {
             printf(" ");
@@ -640,11 +644,14 @@ void uk_so_wl_rbtree_print_level(struct uk_so_wl_rbtree *tree,
             printf(" ");
         }
     } else {
-        uk_so_wl_rbtree_print_level(tree, level - 1, dist, root == 0 ? 0 : root->left);
-        uk_so_wl_rbtree_print_level(tree, level - 1, dist, root == 0 ? 0 : root->right);
+        uk_so_wl_rbtree_print_level(tree, level - 1, dist,
+                                    root == 0 ? 0 : root->left);
+        uk_so_wl_rbtree_print_level(tree, level - 1, dist,
+                                    root == 0 ? 0 : root->right);
     }
 }
 
-unsigned long uk_so_wl_rbtree_get_element_count(struct uk_so_wl_rbtree *tree) {
+unsigned long __WL_CODE
+uk_so_wl_rbtree_get_element_count(struct uk_so_wl_rbtree *tree) {
     return tree->element_count;
 }
