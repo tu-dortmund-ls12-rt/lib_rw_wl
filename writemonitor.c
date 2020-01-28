@@ -124,18 +124,11 @@ void __WL_CODE uk_so_wl_writemonitor_set_page_mode(int generate_interrupts) {
         //        plat_mmu_get_access_permissions(uk_so_wl_monitor_offset +
         //                                        i * 0x1000));
 
-        if (i < uk_so_wl_number_text_pages) {
-            // Text is always RO
-            // plat_mmu_set_access_permissions(
-            //     uk_so_wl_monitor_offset + i * 0x1000,
-            //     generate_interrupts ? PLAT_MMU_PERMISSION_R_FROM_OS_USER
-            //                         : PLAT_MMU_PERMISSION_R_FROM_OS_USER);
-        } else {
-            plat_mmu_set_access_permissions(
-                uk_so_wl_monitor_offset + i * 0x1000,
-                generate_interrupts ? PLAT_MMU_PERMISSION_R_FROM_OS_USER
-                                    : PLAT_MMU_PERMISSION_RW_FROM_OS_USER);
-        }
+        plat_mmu_set_access_permissions(
+            uk_so_wl_monitor_offset + i * 0x1000,
+            generate_interrupts ? PLAT_MMU_PERMISSION_R_FROM_OS_USER
+                                : PLAT_MMU_PERMISSION_RW_FROM_OS_USER);
+
         // printf("PI: 0x%x %d\n", uk_so_wl_monitor_offset + i * 0x1000,
         //        plat_mmu_get_access_permissions(uk_so_wl_monitor_offset +
         //                                        i * 0x1000));
