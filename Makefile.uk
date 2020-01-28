@@ -5,6 +5,7 @@ $(eval $(call addlib_s,lib_so_wl,$(CONFIG_SOFTONLYWEARLEVELINGLIB)))
 LIB_SO_WL_SRCS-y += $(LIB_SO_WL_BASE)/writemonitor.c
 LIB_SO_WL_SRCS-y += $(LIB_SO_WL_BASE)/wl_control.c
 LIB_SO_WL_SRCS-y += $(LIB_SO_WL_BASE)/control_flow.c
+LIB_SO_WL_SRCS-y += $(LIB_SO_WL_BASE)/rbtree.c
 
 # Extend the global include paths with library's folder
 CINCLUDES-$(CONFIG_SOFTONLYWEARLEVELINGLIB) += -I$(LIB_SO_WL_BASE)/include
