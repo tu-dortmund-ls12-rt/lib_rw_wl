@@ -3,8 +3,7 @@
 #define __WL_CODE __attribute((section(".wl_text")))
 #define __WL_DATA __attribute((section(".wl_data")))
 
-struct uk_so_wl_rbtree_node
-    managed_pages[uk_so_wl_pb_MAX_MANAGED_PAGES] __WL_DATA;
+struct uk_so_wl_rbtree_node managed_pages[uk_so_wl_pb_MAX_MANAGED_PAGES] __WL_DATA;
 
 struct uk_so_wl_rbtree aes_tree __WL_DATA = {0, 0};
 
@@ -24,6 +23,9 @@ void __WL_CODE uk_so_wl_pb_initialize() {
         (unsigned long)(&__NVMSYMBOL__APPLICATION_STACK_END);
 
     for (unsigned long i = 0; i < uk_so_wl_pb_MAX_MANAGED_PAGES; i++) {
+        managed_pages[i].value.mapped_vm_page=managed_pages_begin;
+        managed_pages[i].value.phys_address=managed_pages_begin;
+        managed_pages[i].value.access_count=0;
         uk_so_wl_rbtree_insert(&aes_tree, managed_pages + i);
         managed_pages_begin += 0x1000;
         if (managed_pages_begin == managed_pages_end) {
@@ -43,9 +45,9 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
     // Get the target node out of the RBTree
     struct uk_so_wl_rbtree_phys_page_handle target =
         uk_so_wl_rbtree_pop_minimum(&aes_tree);
-    // log("[RMAP] " << vm_page << "{" << MMU::instance.get_mapping(vm_page)
-    //               << "} -> " << hex << target.phys_address << "{" << hex
-    //               << target.mapped_vm_page << "}");
+    // printf("[RMAP] 0x%x {0x%x} -> 0x%x {0x%x}\n", vm_page,
+    //        plat_mmu_get_pm_mapping(vm_page), target.phys_address,
+    //        target.mapped_vm_page);
 
     if (target.mapped_vm_page == (unsigned long)vm_page) {
         // The page cannot be at any better physical location

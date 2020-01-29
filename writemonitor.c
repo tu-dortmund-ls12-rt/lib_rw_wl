@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <uk/assert.h>
 #include <uk/plat/irq.h>
+#include <uk_lib_so_wl/pagebalancer.h>
 #include <uk_lib_so_wl/writemnitor.h>
 
 #define __WL_CODE __attribute((section(".wl_text")))
@@ -37,16 +38,20 @@ void __WL_CODE uk_upper_level_page_fault_handler() {
     // Get the causing address for the access fault
     unsigned long far_el1;
     asm volatile("mrs %0, far_el1" : "=r"(far_el1));
+    far_el1 &= ~0xFFF;
 
     // Determine faulting page
     unsigned long number = (far_el1 - uk_so_wl_monitor_offset) >> 12;
 
     if (number < uk_so_wl_number_pages) {
         uk_so_wl_write_count[number]++;
-#ifdef SOFTONLYWEARLEVELINGLIB_DO_WRITE_LEVELING
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_LEVELING
         if (uk_so_wl_write_count[number] >=
             CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_NOTIFY_THRESHOLD) {
             // Notify Wear Leveling
+
+            uk_so_wl_pb_trigger_rebalance(far_el1);
+
             uk_so_wl_write_count[number] = 0;
         }
 #endif

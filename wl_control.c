@@ -37,6 +37,11 @@ void __WL_CODE uk_so_wl_init_wl_system() {
         (end_monitoring - start_monitoring) >> 12);
 
     uk_so_wl_writemonitor_set_text_size((end_text - start_monitoring) >> 12);
+
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_LEVELING
+    uk_so_wl_pb_initialize();
+#endif
+
     uk_so_wl_writemonitor_init();
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
@@ -55,7 +60,9 @@ void __WL_CODE uk_so_wl_exit_wl_system() {
     uk_so_wl_writemonitor_terminate();
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_PLOT_APPROXIMATION_RESULTS
+#ifndef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_LEVELING
     uk_so_wl_writemonitor_plot_results();
+#endif
 #endif
 #endif
 }
