@@ -15,12 +15,15 @@ void __WL_CODE uk_so_wl_init_wl_system() {
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
     extern unsigned long __NVMSYMBOL__APPLICATION_TEXT_BEGIN;
     extern unsigned long __NVMSYMBOL__APPLICATION_TEXT_END;
+    extern unsigned long __NVMSYMBOL__APPLICATION_STACK_BEGIN;
     extern unsigned long __NVMSYMBOL__APPLICATION_STACK_END;
 
     unsigned long start_monitoring =
         (unsigned long)(&__NVMSYMBOL__APPLICATION_TEXT_BEGIN);
     unsigned long end_text =
         (unsigned long)(&__NVMSYMBOL__APPLICATION_TEXT_END);
+    unsigned long start_stack =
+        (unsigned long)(&__NVMSYMBOL__APPLICATION_STACK_BEGIN);
     unsigned long end_monitoring =
         (unsigned long)(&__NVMSYMBOL__APPLICATION_STACK_END);
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
@@ -38,8 +41,17 @@ void __WL_CODE uk_so_wl_init_wl_system() {
 
     uk_so_wl_writemonitor_set_text_size((end_text - start_monitoring) >> 12);
 
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
+    uk_so_wl_writemonitor_set_stack_offset((start_stack - start_monitoring) >>
+                                           12);
+#endif
+
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_LEVELING
     uk_so_wl_pb_initialize();
+#endif
+
+#ifdef CONFIG_SEPARATE_STACK_PAGETABLES
+    plat_mmu_setup_stack_pages();
 #endif
 
     uk_so_wl_writemonitor_init();

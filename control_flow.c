@@ -1,3 +1,4 @@
+#include <arm/arm64/mmu.h>
 #include <uk/arch/syscalls.h>
 #include <uk/config.h>
 #include <uk_lib_so_wl/control_flow.h>
@@ -74,6 +75,12 @@ void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
 
     UK_PLAT_REGISTER_SYSCALL(0x42);
 
+    extern unsigned long __appstack_top;
+    unsigned long el0_sp = (unsigned long)&__appstack_top;
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
+    el0_sp = PLAT_MMU_VSTACK_BASE + 2 * (CONFIG_APPLICATION_STACK_SIZE);
+#endif
+
     /**
      * According to arm, only X19-X29 are callee saved, which means X0-X18 and
      * X30 need to be backed up before the subprocedure call
@@ -98,8 +105,8 @@ void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
                                                   // continue here :D
         "mov x0, sp;"
         "str x0, [x1];"
-        "ldr x0, =__appstack_top;"  // Store the application stack begin to the
-                                    // el0 stack pointer
+        "mov x0, %1;"  // Store the application stack begin to the
+                       // el0 stack pointer
         "msr sp_el0, x0;"
         "msr elr_el1, %0;"
         "mrs x0, spsr_el1;"  // Configure a fake exception return, which goes
@@ -130,7 +137,7 @@ void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
         "ldp x0,x1,[sp],#16;"
 
         :
-        : "r"(call_param)
+        : "r"(call_param), "r"(el0_sp)
         : "x0", "x1");
 }
 

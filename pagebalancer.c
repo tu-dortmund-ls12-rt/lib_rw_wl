@@ -3,7 +3,8 @@
 #define __WL_CODE __attribute((section(".wl_text")))
 #define __WL_DATA __attribute((section(".wl_data")))
 
-struct uk_so_wl_rbtree_node managed_pages[uk_so_wl_pb_MAX_MANAGED_PAGES] __WL_DATA;
+struct uk_so_wl_rbtree_node
+    managed_pages[uk_so_wl_pb_MAX_MANAGED_PAGES] __WL_DATA;
 
 struct uk_so_wl_rbtree aes_tree __WL_DATA = {0, 0};
 
@@ -23,9 +24,9 @@ void __WL_CODE uk_so_wl_pb_initialize() {
         (unsigned long)(&__NVMSYMBOL__APPLICATION_STACK_END);
 
     for (unsigned long i = 0; i < uk_so_wl_pb_MAX_MANAGED_PAGES; i++) {
-        managed_pages[i].value.mapped_vm_page=managed_pages_begin;
-        managed_pages[i].value.phys_address=managed_pages_begin;
-        managed_pages[i].value.access_count=0;
+        managed_pages[i].value.mapped_vm_page = managed_pages_begin;
+        managed_pages[i].value.phys_address = managed_pages_begin;
+        managed_pages[i].value.access_count = 0;
         uk_so_wl_rbtree_insert(&aes_tree, managed_pages + i);
         managed_pages_begin += 0x1000;
         if (managed_pages_begin == managed_pages_end) {
@@ -45,9 +46,25 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
     // Get the target node out of the RBTree
     struct uk_so_wl_rbtree_phys_page_handle target =
         uk_so_wl_rbtree_pop_minimum(&aes_tree);
-    // printf("[RMAP] 0x%x {0x%x} -> 0x%x {0x%x}\n", vm_page,
-    //        plat_mmu_get_pm_mapping(vm_page), target.phys_address,
-    //        target.mapped_vm_page);
+    printf("[RMAP] 0x%lx {0x%lx} -> 0x%lx {0x%lx}\n", vm_page,
+           plat_mmu_get_pm_mapping(vm_page), target.phys_address,
+           target.mapped_vm_page);
+
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
+    extern unsigned long __NVMSYMBOL__APPLICATION_STACK_BEGIN;
+    unsigned long stack_begin =
+        (unsigned long)&__NVMSYMBOL__APPLICATION_STACK_BEGIN;
+
+    unsigned long real_vm = (unsigned long)vm_page;
+    if (real_vm >= PLAT_MMU_VSTACK_BASE) {
+        if ((real_vm - PLAT_MMU_VSTACK_BASE < CONFIG_APPLICATION_STACK_SIZE)) {
+            vm_page = (void *)(real_vm - PLAT_MMU_VSTACK_BASE + stack_begin);
+        } else {
+            vm_page = (void *)(real_vm - PLAT_MMU_VSTACK_BASE -
+                               CONFIG_APPLICATION_STACK_SIZE + stack_begin);
+        }
+    }
+#endif
 
     if (target.mapped_vm_page == (unsigned long)vm_page) {
         // The page cannot be at any better physical location
@@ -68,7 +85,11 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
 
     // Determine the current physical address
     unsigned long physical_address;
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
+    { physical_address = (unsigned long)plat_mmu_get_pm_mapping(real_vm); }
+#else
     { physical_address = (unsigned long)plat_mmu_get_pm_mapping(vm_page); }
+#endif
     unsigned int array_offset =
         (physical_address - managed_pages_begin) / 0x1000;
 
@@ -82,14 +103,42 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
     managed_pages[array_offset].value.mapped_vm_page = former_vm;
     target.mapped_vm_page = (unsigned long)vm_page;
 
-    // Exchange pagetables
-    plat_mmu_set_pm_mapping(vm_page, target.phys_address);
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
+    unsigned long real_former_vm = (unsigned long)former_vm;
+    if (real_former_vm >= PLAT_MMU_VSTACK_BASE) {
+        if ((real_former_vm - PLAT_MMU_VSTACK_BASE <
+             CONFIG_APPLICATION_STACK_SIZE)) {
+            former_vm =
+                (void *)(real_former_vm - PLAT_MMU_VSTACK_BASE + stack_begin);
+        } else {
+            former_vm = (void *)(real_former_vm - PLAT_MMU_VSTACK_BASE -
+                                 CONFIG_APPLICATION_STACK_SIZE + stack_begin);
+        }
+    }
+    printf("Remapping 0x%lx (fake 0x%lx) to 0x%lx (fake 0x%lx)\n", real_vm,
+           vm_page, real_former_vm, former_vm);
+#endif
 
+// Exchange pagetables
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
+    plat_mmu_set_pm_mapping(real_vm, target.phys_address);
+    plat_mmu_set_pm_mapping(real_former_vm, physical_address);
+#else
+    plat_mmu_set_pm_mapping(vm_page, target.phys_address);
     plat_mmu_set_pm_mapping(former_vm, physical_address);
+#endif
 
     // Last copy the actual data
-    unsigned long *n_page_ptr = (unsigned long *)vm_page;
-    unsigned long *o_page_ptr = (unsigned long *)former_vm;
+    unsigned long *n_page_ptr;
+    unsigned long *o_page_ptr;
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
+    n_page_ptr = (unsigned long *)real_vm;
+    o_page_ptr = (unsigned long *)real_former_vm;
+#else
+    n_page_ptr = (unsigned long *)vm_page;
+    o_page_ptr = (unsigned long *)former_vm;
+#endif
+
     unsigned long *spare = (unsigned long *)(&uk_so_wl_spare_page);
 
     for (unsigned long i = 0; i < 512; i++) {

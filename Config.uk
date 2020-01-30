@@ -18,6 +18,12 @@ config SOFTONLYWEARLEVELINGLIB_DO_WRITE_LEVELING
     default y
     select SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
 
+config SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
+    bool "so_wl_write_leveling: Performs software level stack spinning"
+    default y
+    select SEPARATE_STACK_PAGETABLES
+    select SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
+
 endmenu
 
 if (SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING)
@@ -35,6 +41,14 @@ config SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY
 config SOFTONLYWEARLEVELINGLIB_WRITE_NOTIFY_THRESHOLD
     int "so_wl_notify_threshold: Defines at which count of approximated writes the WL should be triggered"
     default 32
+
+config SOFTONLYWEARLEVELINGLIB_STACK_NOTIFY_THRESHOLD
+    int "so_wl_notify_threshold: Defines at which count of approximated writes the Stack spinning should be triggered"
+    default 1
+
+config SOFTONLYWEARLEVELINGLIB_STACK_MOVEMENT_STEP
+    int "so_wl_notify_threshold: Defines the width of stack spinning"
+    default 64
 
 config SOFTONLYWEARLEVELINGLIB_PLOT_APPROXIMATION_RESULTS
     bool "so_wl_plot_approx_results: Selects if the approximation results should be printed out after the appliction completes"
