@@ -86,7 +86,7 @@ void __WL_CODE uk_so_wl_start_benchmark_el0() {
     printf("Switched down to EL0\n");
     unsigned long sp;
     asm volatile("mov %0, sp" : "=r"(sp));
-    printf("EL0 sp is at 0x%x\n", sp);
+    printf("EL0 sp is at 0x%lx\n", sp);
 #endif
 
     uk_so_wl_global_entry_store();

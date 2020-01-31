@@ -6,6 +6,7 @@
 #include <uk/assert.h>
 #include <uk/plat/irq.h>
 #include <uk_lib_so_wl/pagebalancer.h>
+#include <uk_lib_so_wl/stackbalancer.h>
 #include <uk_lib_so_wl/writemnitor.h>
 
 #define __WL_CODE __attribute((section(".wl_text")))
@@ -20,6 +21,7 @@ unsigned long uk_so_wl_monitor_offset __WL_DATA = 0;
 unsigned long uk_so_wl_number_pages __WL_DATA = 0;
 unsigned long uk_so_wl_number_text_pages __WL_DATA = 0;
 unsigned long uk_so_wl_stack_offset_pages __WL_DATA = 0;
+unsigned long uk_so_wl_overflow_count = 0;
 
 int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
     uk_so_wl_writemonitor_set_page_mode(1);
@@ -30,7 +32,8 @@ int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
     return 1;
 }
 
-void __WL_CODE uk_upper_level_page_fault_handler() {
+void __WL_CODE
+uk_upper_level_page_fault_handler(unsigned long* register_stack) {
     // First disable the overflow interrupt to not mess up things here
     arm64_pmc_enable_overflow_interrupt(0, 0);
 
@@ -54,6 +57,12 @@ void __WL_CODE uk_upper_level_page_fault_handler() {
                      12;
         }
         number += uk_so_wl_stack_offset_pages;
+    }
+    uk_so_wl_overflow_count++;
+    if (uk_so_wl_overflow_count >=
+        CONFIG_SOFTONLYWEARLEVELINGLIB_STACK_NOTIFY_THRESHOLD) {
+        uk_so_wl_overflow_count = 0;
+        uk_so_wl_sb_relocate_from_irq(register_stack);
     }
 #endif
 

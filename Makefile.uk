@@ -7,6 +7,7 @@ LIB_SO_WL_SRCS-y += $(LIB_SO_WL_BASE)/wl_control.c
 LIB_SO_WL_SRCS-y += $(LIB_SO_WL_BASE)/control_flow.c
 LIB_SO_WL_SRCS-y += $(LIB_SO_WL_BASE)/rbtree.c
 LIB_SO_WL_SRCS-y += $(LIB_SO_WL_BASE)/pagebalancer.c
+LIB_SO_WL_SRCS-y += $(LIB_SO_WL_BASE)/stackbalancer.c
 
 # Extend the global include paths with library's folder
 CINCLUDES-$(CONFIG_SOFTONLYWEARLEVELINGLIB) += -I$(LIB_SO_WL_BASE)/include
