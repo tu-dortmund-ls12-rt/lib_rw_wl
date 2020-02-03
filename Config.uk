@@ -13,19 +13,28 @@ config SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
     bool "so_wl_write_monitoring: Determines if write minitoring is performed at all"
     default y
 
+config SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
+    bool "so_wl_read_monitoring: Determines if read minitoring is performed at all"
+    default y
+
 config SOFTONLYWEARLEVELINGLIB_DO_WRITE_LEVELING
     bool "so_wl_write_leveling: Determines if write wear leveling is performed"
     default y
     select SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
 
+config SOFTONLYWEARLEVELINGLIB_DO_READ_LEVELING
+    bool "so_wl_write_leveling: Determines if read leveling is performed"
+    default y
+    select SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
+
 config SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
-    bool "so_wl_write_leveling: Performs software level stack spinning"
+    bool "so_wl_stack_spinning: Performs software level stack spinning"
     default y
     select SEPARATE_STACK_PAGETABLES
     select SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
 
 config SOFTONLYWEARLEVELINGLIB_DO_STACK_POINTER_RELOCATION
-    bool "so_wl_write_leveling: Performs pointer relocation for pointers into the stack"
+    bool "so_wl_pointer_relocation: Performs pointer relocation for pointers into the stack"
     default y
     select SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
 
@@ -39,6 +48,10 @@ config SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE
     int "so_wl_sampling_rate: Determines in what distance the memory accesses are sampled to approximate the access distribution"
     default 5000
 
+config SOFTONLYWEARLEVELINGLIB_READ_SAMPLING_RATE
+    int "so_wl_read_sampling_rate: Determines in what distance the memory accesses are sampled to approximate the access distribution"
+    default 30000
+
 config SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY
     int "so_wl_monitor_capacity: Defines the storage capacity for access approximations"
     default 256
@@ -48,11 +61,11 @@ config SOFTONLYWEARLEVELINGLIB_WRITE_NOTIFY_THRESHOLD
     default 32
 
 config SOFTONLYWEARLEVELINGLIB_STACK_NOTIFY_THRESHOLD
-    int "so_wl_notify_threshold: Defines at which count of approximated writes the Stack spinning should be triggered"
+    int "so_wl_stack_notify_threshold: Defines at which count of approximated writes the Stack spinning should be triggered"
     default 1
 
 config SOFTONLYWEARLEVELINGLIB_STACK_MOVEMENT_STEP
-    int "so_wl_notify_threshold: Defines the width of stack spinning"
+    int "so_wl_stack_movement: Defines the width of stack spinning"
     default 64
 
 config SOFTONLYWEARLEVELINGLIB_PLOT_APPROXIMATION_RESULTS

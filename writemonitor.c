@@ -15,6 +15,11 @@
 unsigned long uk_so_wl_write_count
     [CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY] __WL_DATA;
 
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
+unsigned long uk_so_wl_read_count
+    [CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY] __WL_DATA;
+#endif
+
 // This defines the offset where the monitoring starts to listen, it is usually
 // the first page of the application
 unsigned long uk_so_wl_monitor_offset __WL_DATA = 0;
@@ -24,9 +29,25 @@ unsigned long uk_so_wl_stack_offset_pages __WL_DATA = 0;
 unsigned long uk_so_wl_overflow_count = 0;
 
 int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
-    uk_so_wl_writemonitor_set_page_mode(1);
-    arm64_pmc_write_event_counter(
-        0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
+    // Figure out which counter overflowed
+    if (arm64_pmc_read_counter_overflow_bit(0)) {
+        arm64_pmc_clear_counter_overflow_bit(0);
+        printf("Write overflow\n");
+
+        uk_so_wl_writemonitor_set_page_mode(1);
+        arm64_pmc_write_event_counter(
+            0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
+    }
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
+    if (arm64_pmc_read_counter_overflow_bit(1)) {
+        arm64_pmc_clear_counter_overflow_bit(1);
+        printf("Read overflow\n");
+
+        // uk_so_wl_writemonitor_set_page_mode(1);
+        arm64_pmc_write_event_counter(
+            1, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_READ_SAMPLING_RATE);
+    }
+#endif
 
     // Signal everything was fine
     return 1;
@@ -79,6 +100,7 @@ uk_upper_level_page_fault_handler(unsigned long* register_stack) {
         }
 #endif
     }
+
     arm64_pmc_write_event_counter(
         0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
     arm64_pmc_enable_overflow_interrupt(0, 1);
@@ -96,8 +118,20 @@ void __WL_CODE uk_so_wl_writemonitor_init() {
     arm64_pmc_set_event_counter_enabled(0, 1);
     arm64_pmc_set_count_event(0, ARM64_PMC_BUS_ACCESS_STORE);
     arm64_pmc_set_non_secure_el0_counting(0, 1);
-    arm64_pmc_set_non_secure_el1_counting(0, 0);
+    arm64_pmc_set_non_secure_el1_counting(0, 1);
+    arm64_pmc_set_el1_counting(0, 0);
+    arm64_pmc_set_el0_counting(0, 1);
     arm64_pmc_enable_overflow_interrupt(0, 1);
+
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
+    arm64_pmc_set_event_counter_enabled(1, 1);
+    arm64_pmc_set_count_event(1, ARM64_PMC_BUS_ACCESS_LOAD);
+    arm64_pmc_set_non_secure_el0_counting(1, 1);
+    arm64_pmc_set_non_secure_el1_counting(1, 1);
+    arm64_pmc_set_el1_counting(1, 0);
+    arm64_pmc_set_el0_counting(1, 1);
+    arm64_pmc_enable_overflow_interrupt(1, 1);
+#endif
 
     int rc = ukplat_irq_register(320, uk_so_wl_writemonitor_handle_overflow, 0);
     if (rc < 0) UK_CRASH("Failed to register PMC overflow interrupt handler\n");
@@ -108,6 +142,11 @@ void __WL_CODE uk_so_wl_writemonitor_init() {
 
     arm64_pmc_write_event_counter(
         0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
+
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
+    arm64_pmc_write_event_counter(
+        1, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_READ_SAMPLING_RATE);
+#endif
 }
 
 void __WL_CODE uk_so_wl_writemonitor_set_monitor_offset(unsigned long offset) {
@@ -138,6 +177,11 @@ void __WL_CODE uk_so_wl_writemonitor_terminate() {
     // Set observed pages logic
     arm64_pmc_enable_overflow_interrupt(0, 0);
     arm64_pmc_set_event_counter_enabled(0, 0);
+
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
+    arm64_pmc_enable_overflow_interrupt(1, 0);
+    arm64_pmc_set_event_counter_enabled(1, 0);
+#endif
 }
 
 void __WL_CODE uk_so_wl_writemonitor_plot_results() {
