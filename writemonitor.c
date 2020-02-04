@@ -12,14 +12,24 @@
 #define __WL_CODE __attribute((section(".wl_text")))
 #define __WL_DATA __attribute((section(".wl_data")))
 
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
 unsigned long uk_so_wl_write_count
     [CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY] __WL_DATA;
-unsigned long uk_so_wl_read_count
-    [CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY] __WL_DATA;
+#endif
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
 unsigned long uk_so_wl_read_count
     [CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY] __WL_DATA;
+#endif
+
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_LEVELING
+#define UK_SO_WL_READ_APPROX_SCALER                         \
+    ((CONFIG_SOFTONLYWEARLEVELINGLIB_READ_SAMPLING_RATE /   \
+      CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE) / \
+     2)
+
+#else
+#define UK_SO_WL_READ_APPROX_SCALER 1
 #endif
 
 // This defines the offset where the monitoring starts to listen, it is usually
@@ -41,6 +51,7 @@ unsigned long uk_so_wl_brk_instr;
 unsigned long uk_so_wl_brk_word;
 
 int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
     // Figure out which counter overflowed
     unsigned int page_mode = 0;
     if (arm64_pmc_read_counter_overflow_bit(0)) {
@@ -52,6 +63,7 @@ int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
         arm64_pmc_write_event_counter(
             0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
     }
+#endif
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
     if (arm64_pmc_read_counter_overflow_bit(1)) {
         arm64_pmc_clear_counter_overflow_bit(1);
@@ -70,17 +82,18 @@ int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
          */
         unsigned long pc;
         asm volatile("mrs %0, elr_el1" : "=r"(pc));
+        pc &= ~(0xFFF);
 
         unsigned long number = (pc - uk_so_wl_monitor_offset) >> 12;
 
         if (number < uk_so_wl_number_pages) {
             uk_so_wl_read_count[number]++;
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_LEVELING
-            if (uk_so_wl_write_count[number] >=
+            if (uk_so_wl_read_count[number] >=
                 CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_NOTIFY_THRESHOLD) {
                 // Notify Wear Leveling
 
-                uk_so_wl_pb_trigger_rebalance(far_el1);
+                uk_so_wl_pb_trigger_rebalance(pc);
 
                 uk_so_wl_read_count[number] = 0;
             }
@@ -88,8 +101,9 @@ int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
         }
     }
 #endif
-
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
     uk_so_wl_writemonitor_set_page_mode(page_mode);
+#endif
 
     // Signal everything was fine
     return 1;
@@ -97,6 +111,7 @@ int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
 
 void __WL_CODE
 uk_upper_level_page_fault_handler_w(unsigned long* register_stack) {
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
     // First disable the overflow interrupt to not mess up things here
     arm64_pmc_enable_overflow_interrupt(0, 0);
     uk_so_wl_writemonitor_set_page_mode(0);
@@ -133,7 +148,7 @@ uk_upper_level_page_fault_handler_w(unsigned long* register_stack) {
 #endif
 
         if (number < uk_so_wl_number_pages) {
-            uk_so_wl_write_count[number]++;
+            uk_so_wl_write_count[number] += 1 * UK_SO_WL_READ_APPROX_SCALER;
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_LEVELING
             if (uk_so_wl_write_count[number] >=
                 CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_NOTIFY_THRESHOLD) {
@@ -145,8 +160,10 @@ uk_upper_level_page_fault_handler_w(unsigned long* register_stack) {
             }
 #endif
         }
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
         arm64_pmc_write_event_counter(
             0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
+#endif
     }
 
     // if we are still waiting for a read, only allow a single instruction
@@ -155,10 +172,12 @@ uk_upper_level_page_fault_handler_w(unsigned long* register_stack) {
     }
 
     arm64_pmc_enable_overflow_interrupt(0, 1);
+#endif
 }
 
 void __WL_CODE
 uk_upper_level_page_fault_handler_r(unsigned long* register_stack) {
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
     // First disable the overflow interrupt to not mess up things here
     arm64_pmc_enable_overflow_interrupt(1, 0);
     uk_so_wl_writemonitor_set_page_mode(0);
@@ -196,7 +215,7 @@ uk_upper_level_page_fault_handler_r(unsigned long* register_stack) {
 
         if (number < uk_so_wl_number_pages) {
             uk_so_wl_read_count[number]++;
-#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_LEVELING
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_LEVELING
             if (uk_so_wl_read_count[number] >=
                 CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_NOTIFY_THRESHOLD) {
                 // Notify Wear Leveling
@@ -207,11 +226,14 @@ uk_upper_level_page_fault_handler_r(unsigned long* register_stack) {
             }
 #endif
         }
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
         arm64_pmc_write_event_counter(
             1, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_READ_SAMPLING_RATE);
+#endif
     }
 
     arm64_pmc_enable_overflow_interrupt(1, 1);
+#endif
 }
 
 void uk_upper_level_breakpoint_handler(unsigned long* register_stack) {
@@ -251,10 +273,15 @@ void uk_so_wl_restore_brk_instr() {
 }
 
 void __WL_CODE uk_so_wl_writemonitor_init() {
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
     for (unsigned long i = 0;
          i < CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY; i++) {
         uk_so_wl_write_count[i] = 0;
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
+        uk_so_wl_read_count[i] = 0;
+#endif
     }
+#endif
     /**
      * This is a generic initialization of the PMC functionality
      */
@@ -283,9 +310,10 @@ void __WL_CODE uk_so_wl_writemonitor_init() {
     gic_set_irq_prio(320, 0);
 
     asm volatile("msr daifclr, #0b1111");
-
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
     arm64_pmc_write_event_counter(
         0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
+#endif
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
     arm64_pmc_write_event_counter(
@@ -299,6 +327,7 @@ void __WL_CODE uk_so_wl_writemonitor_set_monitor_offset(unsigned long offset) {
 
 void __WL_CODE
 uk_so_wl_writemonitor_set_number_pages(unsigned long number_pages) {
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
     if (number_pages > CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY) {
         UK_CRASH(
             "Too many pages to monitor are requested. Requested %u, bot only "
@@ -306,6 +335,7 @@ uk_so_wl_writemonitor_set_number_pages(unsigned long number_pages) {
             number_pages, CONFIG_SOFTONLYWEARLEVELINGLIB_MONITOR_CAPACITY);
     }
     uk_so_wl_number_pages = number_pages;
+#endif
 }
 
 void __WL_CODE uk_so_wl_writemonitor_set_text_size(unsigned long number_pages) {
@@ -329,12 +359,20 @@ void __WL_CODE uk_so_wl_writemonitor_terminate() {
 }
 
 void __WL_CODE uk_so_wl_writemonitor_plot_results() {
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
+
     // Print out write counts for all approximated pages
     for (unsigned long i = 0; i < uk_so_wl_number_pages; i++) {
-        // Print out the address and the approximation
+// Print out the address and the approximation
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
         printf("%x R %u W %u\n", (uk_so_wl_monitor_offset + i * 0x1000),
                uk_so_wl_read_count[i], uk_so_wl_write_count[i]);
+#else
+        printf("%x W %u\n", (uk_so_wl_monitor_offset + i * 0x1000),
+               uk_so_wl_write_count[i]);
+#endif
     }
+#endif
 }
 
 void __WL_CODE uk_so_wl_writemonitor_set_page_mode(int generate_interrupts) {
