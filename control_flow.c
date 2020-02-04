@@ -79,6 +79,9 @@ void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
     unsigned long el0_sp = (unsigned long)&__appstack_top;
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
     el0_sp = PLAT_MMU_VSTACK_BASE + 2 * (CONFIG_APPLICATION_STACK_SIZE);
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
+    printf("Setting EL0 stack to 0x%lx\n", el0_sp);
+#endif
 #endif
 
     /**

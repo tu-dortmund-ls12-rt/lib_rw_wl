@@ -118,7 +118,8 @@ void __WL_CODE uk_so_wl_prepare_wl_code_permissions() {
 
     for (unsigned long page = (unsigned long)(&__WL_TEXT_SECTION_BEGIN);
          page < (unsigned long)(&__WL_TEXT_SECTION_END); page += 0x1000) {
-        plat_mmu_set_access_permissions(page, PLAT_MMU_PERMISSION_RW_FROM_OS);
+        plat_mmu_set_access_permissions(page, PLAT_MMU_PERMISSION_RW_FROM_OS,
+                                        1);
     }
 }
 
