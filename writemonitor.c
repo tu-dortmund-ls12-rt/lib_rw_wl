@@ -61,6 +61,31 @@ int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
         uk_so_wl_waiting_for_read = 1;
         arm64_pmc_write_event_counter(
             1, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_READ_SAMPLING_RATE);
+
+        /**
+         * Intructions fetches are not captured by the permission trap system
+         * (anyway makes no sense since then only instruction fetches would
+         * cause faults) but still count on the PMCs, luckily we can sample them
+         * by the interrupted PC here
+         */
+        unsigned long pc;
+        asm volatile("mrs %0, elr_el1" : "=r"(pc));
+
+        unsigned long number = (pc - uk_so_wl_monitor_offset) >> 12;
+
+        if (number < uk_so_wl_number_pages) {
+            uk_so_wl_read_count[number]++;
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_LEVELING
+            if (uk_so_wl_write_count[number] >=
+                CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_NOTIFY_THRESHOLD) {
+                // Notify Wear Leveling
+
+                uk_so_wl_pb_trigger_rebalance(far_el1);
+
+                uk_so_wl_read_count[number] = 0;
+            }
+#endif
+        }
     }
 #endif
 
@@ -330,14 +355,13 @@ void __WL_CODE uk_so_wl_writemonitor_set_page_mode(int generate_interrupts) {
         if (i < uk_so_wl_stack_offset_pages) {
 #endif
             plat_mmu_set_access_permissions(
-                uk_so_wl_monitor_offset + i * 0x1000, permission,
-                generate_interrupts != 2);
+                uk_so_wl_monitor_offset + i * 0x1000, permission, 1);
 #ifdef CONFIG_SEPARATE_STACK_PAGETABLES
         } else {
             plat_mmu_set_access_permissions(
                 (PLAT_MMU_VSTACK_BASE) +
                     (i - uk_so_wl_stack_offset_pages) * 0x1000,
-                permission, generate_interrupts != 2);
+                1);
         }
 #endif
     }
