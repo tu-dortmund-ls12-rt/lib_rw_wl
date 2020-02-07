@@ -70,7 +70,7 @@ UK_PLAT_SYSCALL_HANDLER(0x42) {
 
 void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
-    printf("Jumping to el0 and call 0x%x\n", call_param);
+    printf("Jumping to el0 and call 0x%lx\n", call_param);
 #endif
 
     UK_PLAT_REGISTER_SYSCALL(0x42);

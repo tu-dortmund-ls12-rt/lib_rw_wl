@@ -7,21 +7,43 @@
 #define __WL_CODE __attribute((section(".wl_text")))
 #define __WL_DATA __attribute((section(".wl_data")))
 
-void __WL_CODE uk_so_wl_init_wl_system() {
+unsigned long uk_app_base __WL_DATA;
+unsigned long uk_text_begin __WL_DATA;
+unsigned long uk_text_end __WL_DATA;
+unsigned long uk_data_begin __WL_DATA;
+unsigned long uk_data_end __WL_DATA;
+unsigned long uk_bss_begin __WL_DATA;
+unsigned long uk_bss_end __WL_DATA;
+unsigned long uk_spiining_begin __WL_DATA;
+unsigned long uk_spinning_end __WL_DATA;
+
+void __WL_CODE uk_so_wl_init_wl_system(
+    unsigned long app_base, unsigned long text_begin, unsigned long text_end,
+    unsigned long data_begin, unsigned long data_end, unsigned long bss_begin,
+    unsigned long bss_end, unsigned long spiining_begin,
+    unsigned long spinning_end) {
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
     printf("Initializing Software only wear leveling\n");
 #endif
+    uk_app_base = app_base;
+    uk_text_begin = text_begin;
+    uk_text_end = text_end;
+    uk_data_begin = data_begin;
+    uk_data_end = data_end;
+    uk_bss_begin = bss_begin;
+    uk_bss_end = bss_end;
+    uk_spiining_begin = spiining_begin;
+    uk_spinning_end = spinning_end;
+
+    uk_so_wl_prepare_wl_code_permissions();
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
-    extern unsigned long __NVMSYMBOL__APPLICATION_TEXT_BEGIN;
-    extern unsigned long __NVMSYMBOL__APPLICATION_TEXT_END;
+
     extern unsigned long __NVMSYMBOL__APPLICATION_STACK_BEGIN;
     extern unsigned long __NVMSYMBOL__APPLICATION_STACK_END;
 
-    unsigned long start_monitoring =
-        (unsigned long)(&__NVMSYMBOL__APPLICATION_TEXT_BEGIN);
-    unsigned long end_text =
-        (unsigned long)(&__NVMSYMBOL__APPLICATION_TEXT_END);
+    unsigned long start_monitoring = app_base + text_begin;
+    unsigned long end_text = app_base + text_end;
     unsigned long start_stack =
         (unsigned long)(&__NVMSYMBOL__APPLICATION_STACK_BEGIN);
     unsigned long end_monitoring =
@@ -113,13 +135,20 @@ void __WL_CODE uk_so_wl_start_benchmark_irq_stack() {
 }
 
 void __WL_CODE uk_so_wl_prepare_wl_code_permissions() {
-    extern unsigned long __WL_TEXT_SECTION_BEGIN;
-    extern unsigned long __WL_TEXT_SECTION_END;
+    unsigned long start = uk_app_base + uk_text_begin;
+    unsigned long stop = uk_app_base + uk_text_end;
 
-    for (unsigned long page = (unsigned long)(&__WL_TEXT_SECTION_BEGIN);
-         page < (unsigned long)(&__WL_TEXT_SECTION_END); page += 0x1000) {
+    for (unsigned long page = start; page < stop; page += 0x1000) {
         plat_mmu_set_access_permissions(page, PLAT_MMU_PERMISSION_RW_FROM_OS,
                                         1);
+    }
+
+    start = uk_app_base + uk_text_end;
+    stop = uk_app_base + uk_bss_end;
+
+    for (unsigned long page = start; page < stop; page += 0x1000) {
+        plat_mmu_set_access_permissions(page,
+                                        PLAT_MMU_PERMISSION_RW_FROM_OS_USER, 1);
     }
 }
 
@@ -132,8 +161,6 @@ void __WL_CODE uk_so_wl_start_benchmark(void (*entry)()) {
 #endif
 
     uk_so_wl_global_entry_store = entry;
-
-    uk_so_wl_prepare_wl_code_permissions();
 
     uk_so_wl_switch_to_irq_stack(uk_so_wl_start_benchmark_irq_stack);
 

@@ -50,6 +50,8 @@ void uk_so_wl_restore_brk_instr();
 unsigned long uk_so_wl_brk_instr;
 unsigned long uk_so_wl_brk_word;
 
+int tcounter = 0;
+
 int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
     // Figure out which counter overflowed
@@ -86,18 +88,21 @@ int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
 
         unsigned long number = (pc - uk_so_wl_monitor_offset) >> 12;
 
-        if (number < uk_so_wl_number_pages) {
-            uk_so_wl_read_count[number]++;
+        if (tcounter++ >= 4) {
+            if (number < uk_so_wl_number_pages) {
+                tcounter = 0;
+                uk_so_wl_read_count[number]++;
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_LEVELING
-            if (uk_so_wl_read_count[number] >=
-                CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_NOTIFY_THRESHOLD) {
-                // Notify Wear Leveling
+                if (uk_so_wl_read_count[number] >=
+                    CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_NOTIFY_THRESHOLD) {
+                    // Notify Wear Leveling
 
-                uk_so_wl_pb_trigger_rebalance(pc);
+                    uk_so_wl_pb_trigger_rebalance(pc);
 
-                uk_so_wl_read_count[number] = 0;
-            }
+                    uk_so_wl_read_count[number] = 0;
+                }
 #endif
+            }
         }
     }
 #endif
@@ -399,7 +404,7 @@ void __WL_CODE uk_so_wl_writemonitor_set_page_mode(int generate_interrupts) {
             plat_mmu_set_access_permissions(
                 (PLAT_MMU_VSTACK_BASE) +
                     (i - uk_so_wl_stack_offset_pages) * 0x1000,
-                1);
+                permission, 1);
         }
 #endif
     }
