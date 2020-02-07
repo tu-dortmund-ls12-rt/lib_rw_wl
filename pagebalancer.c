@@ -14,14 +14,14 @@ unsigned char uk_so_wl_spare_page[4096] __attribute((aligned(0x1000)))
 __WL_DATA;
 
 extern unsigned long __NVMSYMBOL__APPLICATION_DATA_BEGIN;
-extern unsigned long __NVMSYMBOL__APPLICATION_DATA_END;
+extern unsigned long __NVMSYMBOL__APPLICATION_STACK_END;
 
 void __WL_CODE uk_so_wl_pb_initialize() {
     // Create nodes for all managed pages and add them to a tree
     unsigned long managed_pages_begin =
-        (unsigned long)(&__NVMSYMBOL__APPLICATION_DATA_BEGIN);
+        (unsigned long)(&__NVMSYMBOL__APPLICATION_DATA_BEGIN) + 0x1000;
     unsigned long managed_pages_end =
-        (unsigned long)(&__NVMSYMBOL__APPLICATION_DATA_END);
+        (unsigned long)(&__NVMSYMBOL__APPLICATION_STACK_END);
 
     for (unsigned long i = 0; i < uk_so_wl_pb_MAX_MANAGED_PAGES; i++) {
         managed_pages[i].value.mapped_vm_page = managed_pages_begin;
@@ -42,7 +42,7 @@ void __WL_CODE uk_so_wl_pb_initialize() {
 
 void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
     unsigned long managed_pages_begin =
-        (unsigned long)(&__NVMSYMBOL__APPLICATION_DATA_BEGIN);
+        (unsigned long)(&__NVMSYMBOL__APPLICATION_DATA_BEGIN) + 0x1000;
     // Get the target node out of the RBTree
     struct uk_so_wl_rbtree_phys_page_handle target =
         uk_so_wl_rbtree_pop_minimum(&aes_tree);
@@ -111,8 +111,7 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
     unsigned long real_former_vm = (unsigned long)former_vm;
     if (real_former_vm >= stack_begin && real_former_vm < stack_end) {
         former_vm =
-            (void *)(real_former_vm - stack_begin +
-                     PLAT_MMU_VSTACK_BASE);
+            (void *)(real_former_vm - stack_begin + PLAT_MMU_VSTACK_BASE);
     }
     // printf("Remapping 0x%lx (fake 0x%lx) to 0x%lx (fake 0x%lx)\n", real_vm,
     //        vm_page, real_former_vm, former_vm);
