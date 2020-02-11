@@ -35,6 +35,9 @@ void __WL_CODE uk_so_wl_init_wl_system(
     uk_spiining_begin = spiining_begin;
     uk_spinning_end = spinning_end;
 
+    // Let the spinning skip the note section
+    uk_spiining_begin = uk_text_begin;
+
     uk_so_wl_prepare_wl_code_permissions();
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
@@ -74,6 +77,10 @@ void __WL_CODE uk_so_wl_init_wl_system(
 
 #ifdef CONFIG_SEPARATE_STACK_PAGETABLES
     plat_mmu_setup_stack_pages();
+#endif
+
+#ifdef CONFIG_SEPARATE_TEXT_PAGETABLES
+    plat_mmu_setup_text_pages();
 #endif
 
     uk_so_wl_writemonitor_init();
