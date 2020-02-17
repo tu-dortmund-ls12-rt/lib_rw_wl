@@ -86,7 +86,15 @@ int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
         asm volatile("mrs %0, elr_el1" : "=r"(pc));
         pc &= ~(0xFFF);
 
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
+        extern unsigned long uk_app_text_size;
+        if (pc >= PLAT_MMU_VTEXT_BASE + uk_app_text_size) {
+            pc -= uk_app_text_size;
+        }
+        unsigned long number = (pc - PLAT_MMU_VTEXT_BASE) >> 12;
+#else
         unsigned long number = (pc - uk_so_wl_monitor_offset) >> 12;
+#endif
 
         if (tcounter++ >= 4) {
             if (number < uk_so_wl_number_pages) {
@@ -150,6 +158,25 @@ uk_upper_level_page_fault_handler_w(unsigned long* register_stack) {
             uk_so_wl_overflow_count = 0;
             uk_so_wl_sb_relocate_from_irq(register_stack);
         }
+#endif
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
+        extern unsigned long uk_app_text_size;
+        if (far_el1 >= PLAT_MMU_VTEXT_BASE &&
+            far_el1 < PLAT_MMU_VTEXT_BASE + 2 * uk_app_text_size) {
+            if ((far_el1 - PLAT_MMU_VTEXT_BASE) < uk_app_text_size) {
+                number = (far_el1 - PLAT_MMU_VTEXT_BASE) >> 12;
+            } else {
+                number =
+                    (far_el1 - PLAT_MMU_VTEXT_BASE - uk_app_text_size) >> 12;
+            }
+            number += 0;
+        }
+        // uk_so_wl_overflow_count++;
+        // if (uk_so_wl_overflow_count >=
+        //     CONFIG_SOFTONLYWEARLEVELINGLIB_STACK_NOTIFY_THRESHOLD) {
+        //     uk_so_wl_overflow_count = 0;
+        //     uk_so_wl_sb_relocate_from_irq(register_stack);
+        // }
 #endif
 
         if (number < uk_so_wl_number_pages) {
@@ -217,8 +244,29 @@ uk_upper_level_page_fault_handler_r(unsigned long* register_stack) {
             uk_so_wl_sb_relocate_from_irq(register_stack);
         }
 #endif
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
+        extern unsigned long uk_app_text_size;
+        if (far_el1 >= PLAT_MMU_VTEXT_BASE &&
+            far_el1 < PLAT_MMU_VTEXT_BASE + 2 * uk_app_text_size) {
+            printf("RAccessing vtext page 0x%lx\n", far_el1);
+            if ((far_el1 - PLAT_MMU_VTEXT_BASE) < uk_app_text_size) {
+                number = (far_el1 - PLAT_MMU_VTEXT_BASE) >> 12;
+            } else {
+                number =
+                    (far_el1 - PLAT_MMU_VTEXT_BASE - uk_app_text_size) >> 12;
+            }
+            number += 0;
+        }
+        // uk_so_wl_overflow_count++;
+        // if (uk_so_wl_overflow_count >=
+        //     CONFIG_SOFTONLYWEARLEVELINGLIB_STACK_NOTIFY_THRESHOLD) {
+        //     uk_so_wl_overflow_count = 0;
+        //     uk_so_wl_sb_relocate_from_irq(register_stack);
+        // }
+#endif
 
         if (number < uk_so_wl_number_pages) {
+            printf("Increasing read count for %d\n", number);
             uk_so_wl_read_count[number]++;
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_LEVELING
             if (uk_so_wl_read_count[number] >=
@@ -258,11 +306,16 @@ void uk_so_wl_trap_next_instr() {
      * thus we can simply modify the next instruction
      */
     pc += 8;
+    unsigned long aligned_pc = pc & ~(0b111);
+    int lower = (pc == aligned_pc);
     // printf("BRK will be at 0x%lx\n", pc);
-    unsigned long* instr = (unsigned long*)pc;
+    unsigned long* instr = (unsigned long*)aligned_pc;
     uk_so_wl_brk_instr = pc;
+    // printf("FAR brk at 0x%lx\n", instr);
     uk_so_wl_brk_word = *instr;
-    *instr = 0xD4200000;  // Store a breakpoint here
+    *instr &= lower ? ~(0xFFFFFFFF) : ~(0xFFFFFFFF00000000);
+    *instr |=
+        lower ? (0xD4200000) : (0xD420000000000000);  // Store a breakpoint here
 }
 
 void uk_so_wl_restore_brk_instr() {
@@ -273,7 +326,8 @@ void uk_so_wl_restore_brk_instr() {
         while (1)
             ;
     }
-    unsigned long* instr = (unsigned long*)pc;
+    unsigned long aligned_pc = pc & ~(0b111);
+    unsigned long* instr = (unsigned long*)aligned_pc;
     *instr = uk_so_wl_brk_word;
 }
 
@@ -397,8 +451,22 @@ void __WL_CODE uk_so_wl_writemonitor_set_page_mode(int generate_interrupts) {
 #ifdef CONFIG_SEPARATE_STACK_PAGETABLES
         if (i < uk_so_wl_stack_offset_pages) {
 #endif
-            plat_mmu_set_access_permissions(
-                uk_so_wl_monitor_offset + i * 0x1000, permission, 1);
+#ifdef CONFIG_SEPARATE_TEXT_PAGETABLES
+            if (i < uk_so_wl_number_text_pages) {
+                // printf("Setting WP for 0x%lx\n",
+                //        PLAT_MMU_VTEXT_BASE + (i)*0x1000);
+                plat_mmu_set_access_permissions(
+                    (PLAT_MMU_VTEXT_BASE) + (i)*0x1000, permission, 1);
+            } else {
+#endif
+                // printf("Setting WP for 0x%lx\n",
+                //        uk_so_wl_monitor_offset + i * 0x1000);
+                plat_mmu_set_access_permissions(
+                    uk_so_wl_monitor_offset + i * 0x1000, permission, 1);
+#ifdef CONFIG_SEPARATE_TEXT_PAGETABLES
+            }
+#endif
+
 #ifdef CONFIG_SEPARATE_STACK_PAGETABLES
         } else {
             plat_mmu_set_access_permissions(
@@ -408,4 +476,5 @@ void __WL_CODE uk_so_wl_writemonitor_set_page_mode(int generate_interrupts) {
         }
 #endif
     }
+    // printf("\n");
 }

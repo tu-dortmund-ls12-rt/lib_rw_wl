@@ -71,6 +71,11 @@ void __WL_CODE uk_so_wl_init_wl_system(
                                            12);
 #endif
 
+#ifdef CONFIG_SEPARATE_TEXT_PAGETABLES
+    uk_so_wl_writemonitor_set_text_size((uk_spinning_end - uk_spiining_begin) >>
+                                        12);
+#endif
+
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_LEVELING
     uk_so_wl_pb_initialize();
 #endif
