@@ -14,7 +14,9 @@ extern unsigned long uk_spiining_begin;
 extern unsigned long uk_spinning_end;
 
 void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
-    printf("Triggered Text rebalance\n");
+    printf("Triggered Text rebalance from 0x%lx to 0x%lx\n",
+           PLAT_MMU_VTEXT_BASE - 0x1000 + uk_spiining_begin,
+           PLAT_MMU_VTEXT_BASE - 0x1000 + uk_spinning_end);
     // Move the text first
     unsigned long *curr =
         (unsigned long *)(PLAT_MMU_VTEXT_BASE + uk_spinning_end - 0x1000);
@@ -33,7 +35,7 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
     if (PLAT_MMU_VTEXT_BASE + uk_spiining_begin +
             CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP - 0x1000 >=
         PLAT_MMU_VTEXT_BASE + uk_app_text_size - 0x1000) {
-        will_wrap = 1;
+        // will_wrap = 1;
     }
 
     // Patch the register file, if any intermediate address calculation is in
