@@ -100,6 +100,7 @@ void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
         "stp x14,x15,[sp,#-16]!;"
         "stp x16,x17,[sp,#-16]!;"
         "stp x18,x30,[sp,#-16]!;"
+        "stp x28,x29,[sp,#-16]!;"
         ""
         "ldr x1, =uk_so_wl_intermediate_el1_sp;"  // Store the old stack
                                                   // pointer. After finishing
@@ -110,6 +111,7 @@ void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
         "str x0, [x1];"
         "mov x0, %1;"  // Store the application stack begin to the
                        // el0 stack pointer
+        "mov x29,#0;"
         "msr sp_el0, x0;"
         "msr elr_el1, %0;"
         "mrs x0, spsr_el1;"  // Configure a fake exception return, which goes
@@ -128,6 +130,7 @@ void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
         "ldr x0, [x1];"
         "mov sp, x0;"
         ""
+        "ldp x28,x29,[sp],#16;"
         "ldp x18,x30,[sp],#16;"
         "ldp x16,x17,[sp],#16;"
         "ldp x14,x15,[sp],#16;"

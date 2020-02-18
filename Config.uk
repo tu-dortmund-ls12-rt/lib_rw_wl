@@ -71,8 +71,16 @@ config SOFTONLYWEARLEVELINGLIB_STACK_NOTIFY_THRESHOLD
     int "so_wl_stack_notify_threshold: Defines at which count of approximated writes the Stack spinning should be triggered"
     default 1
 
+config SOFTONLYWEARLEVELINGLIB_TEXT_NOTIFY_THRESHOLD
+    int "so_wl_text_notify_threshold: Defines at which count of approximated writes the text spinning should be triggered"
+    default 1
+
 config SOFTONLYWEARLEVELINGLIB_STACK_MOVEMENT_STEP
     int "so_wl_stack_movement: Defines the width of stack spinning"
+    default 64
+
+config SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP
+    int "so_wl_text_movement: Defines the width of text spinning"
     default 64
 
 config SOFTONLYWEARLEVELINGLIB_PLOT_APPROXIMATION_RESULTS

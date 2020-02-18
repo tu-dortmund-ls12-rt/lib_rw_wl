@@ -3,10 +3,13 @@
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
 
+#define __WL_CODE __attribute((section(".wl_text")))
+#define __WL_DATA __attribute((section(".wl_data")))
+
 unsigned long __current_stack_base_ptr =
     PLAT_MMU_VSTACK_BASE + (2 * CONFIG_APPLICATION_STACK_SIZE);
 
-void uk_so_wl_sb_relocate_from_irq(unsigned long *saved_stack_base) {
+void __WL_CODE uk_so_wl_sb_relocate_from_irq(unsigned long *saved_stack_base) {
     // Print the register stack
     // printf("X0: 0x%lx\n", saved_stack_base[0]);
     // printf("X1: 0x%lx\n", saved_stack_base[1]);
@@ -92,13 +95,14 @@ void uk_so_wl_sb_relocate_from_irq(unsigned long *saved_stack_base) {
         // Check if the word has to be relocated
         if (lword < __current_stack_base_ptr && lword > __shadow_stack_begin) {
             // printf("Relocating X%d from 0x%lx to 0x%lx\n", i, lword,
-            //        lword - CONFIG_SOFTONLYWEARLEVELINGLIB_STACK_MOVEMENT_STEP);
+            //        lword -
+            //        CONFIG_SOFTONLYWEARLEVELINGLIB_STACK_MOVEMENT_STEP);
             // lword -= CONFIG_SOFTONLYWEARLEVELINGLIB_STACK_MOVEMENT_STEP;
         }
         // Check if the word is in the shadow
         if (will_wrap && lword < __virtual_stack_begin &&
             lword >= __shadow_stack_begin) {
-                // printf("Wrap\n");
+            // printf("Wrap\n");
             lword += CONFIG_APPLICATION_STACK_SIZE;
         }
         saved_stack_base[i] = lword;

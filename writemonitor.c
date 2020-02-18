@@ -42,7 +42,8 @@ unsigned long uk_so_wl_stack_offset_pages __WL_DATA = 0;
 unsigned int uk_so_wl_waiting_for_write __WL_DATA = 0;
 unsigned int uk_so_wl_waiting_for_read __WL_DATA = 0;
 
-unsigned long uk_so_wl_overflow_count = 0;
+unsigned long uk_so_wl_overflow_count __WL_DATA = 0;
+unsigned long uk_so_wl_text_overflow_count __WL_DATA = 0;
 
 void uk_so_wl_trap_next_instr();
 void uk_so_wl_restore_brk_instr();
@@ -95,7 +96,7 @@ int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
 #else
         unsigned long number = (pc - uk_so_wl_monitor_offset) >> 12;
 #endif
-
+        // printf("Increasing read count for text page %d\n",number);
         if (tcounter++ >= 4) {
             if (number < uk_so_wl_number_pages) {
                 tcounter = 0;
@@ -171,12 +172,12 @@ uk_upper_level_page_fault_handler_w(unsigned long* register_stack) {
             }
             number += 0;
         }
-        // uk_so_wl_overflow_count++;
-        // if (uk_so_wl_overflow_count >=
-        //     CONFIG_SOFTONLYWEARLEVELINGLIB_STACK_NOTIFY_THRESHOLD) {
-        //     uk_so_wl_overflow_count = 0;
-        //     uk_so_wl_sb_relocate_from_irq(register_stack);
-        // }
+        uk_so_wl_text_overflow_count++;
+        if (uk_so_wl_text_overflow_count >=
+            CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_NOTIFY_THRESHOLD) {
+            uk_so_wl_text_overflow_count = 0;
+            uk_so_wl_tb_text_from_irq(register_stack);
+        }
 #endif
 
         if (number < uk_so_wl_number_pages) {
@@ -257,16 +258,15 @@ uk_upper_level_page_fault_handler_r(unsigned long* register_stack) {
             }
             number += 0;
         }
-        // uk_so_wl_overflow_count++;
-        // if (uk_so_wl_overflow_count >=
-        //     CONFIG_SOFTONLYWEARLEVELINGLIB_STACK_NOTIFY_THRESHOLD) {
-        //     uk_so_wl_overflow_count = 0;
-        //     uk_so_wl_sb_relocate_from_irq(register_stack);
-        // }
+        uk_so_wl_text_overflow_count++;
+        if (uk_so_wl_text_overflow_count >=
+            CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_NOTIFY_THRESHOLD) {
+            uk_so_wl_text_overflow_count = 0;
+            uk_so_wl_tb_text_from_irq(register_stack);
+        }
 #endif
 
         if (number < uk_so_wl_number_pages) {
-            printf("Increasing read count for %d\n", number);
             uk_so_wl_read_count[number]++;
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_READ_LEVELING
             if (uk_so_wl_read_count[number] >=
