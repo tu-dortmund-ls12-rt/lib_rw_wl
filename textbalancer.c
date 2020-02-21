@@ -20,29 +20,6 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
     printf("Triggered Text rebalance from 0x%lx to 0x%lx\n",
            PLAT_MMU_VTEXT_BASE - 0x1000 + uk_spiining_begin,
            PLAT_MMU_VTEXT_BASE - 0x1000 + uk_spinning_end);
-    // Move the text first
-    unsigned long *curr =
-        (unsigned long *)(PLAT_MMU_VTEXT_BASE + uk_spinning_end - 0x1000);
-    // We dont need the last word doubled
-    curr--;
-    while ((unsigned long)curr >=
-           PLAT_MMU_VTEXT_BASE + uk_spiining_begin - 0x1000) {
-        unsigned long *target =
-            (unsigned long
-                 *)(((unsigned long)curr) +
-                    CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP);
-        *target = *curr;
-        // printf("Copying 0x%lx from 0x%lx to 0x%lx (0x%lx)\n", *curr, curr,
-        //        target, *target);
-        unsigned long target_p = ((unsigned long)target) >> 12;
-        unsigned long src_p = ((unsigned long)curr) >> 12;
-        if (target_p != src_p) {
-            if ((*target & 0x9f000000) == 0x90000000) {
-                printf("moving adrp instruction over page bound\n");
-            }
-        }
-        curr--;
-    }
 
     int will_wrap = 0;
     if (PLAT_MMU_VTEXT_BASE + uk_spiining_begin +
@@ -51,13 +28,44 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
         will_wrap = 1;
     }
 
+    // Move the text first
+    unsigned int *curr =
+        (unsigned int *)(PLAT_MMU_VTEXT_BASE + uk_spinning_end - 0x1000);
+    // We dont need the last word doubled
+    curr--;
+    while ((unsigned long)curr >=
+           PLAT_MMU_VTEXT_BASE + uk_spiining_begin - 0x1000) {
+        unsigned int *target =
+            (unsigned int *)(((unsigned long)curr) +
+                             CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP);
+        *target = *curr;
+        // printf("Copying 0x%lx from 0x%lx to 0x%lx (0x%lx)\n", *curr, curr,
+        //        target, *target);
+        unsigned long target_p = ((unsigned long)target) >> 12;
+        unsigned long src_p = ((unsigned long)curr) >> 12;
+        if ((*target & 0x9f000000) == 0x90000000) {
+            if (target_p != src_p) {
+                // printf(
+                //     "moving adrp instruction 0x%lx over page bound (%d to "
+                //     "%d)\n",
+                //     target, src_p, target_p);
+                uk_reloc_adjust_adrp(target, -1 * (target_p - src_p));
+            }
+            if (will_wrap) {
+                // printf("Wrapping  back\n");
+                uk_reloc_adjust_adrp(target, uk_app_text_size >> 12);
+            }
+        }
+        curr--;
+    }
+
     // Patch the register file, if any intermediate address calculation is in
     // progress right now
     for (unsigned long i = 0; i < 31; i++) {
         unsigned long lword = saved_stack_base[i];
         if (lword >= PLAT_MMU_VTEXT_BASE + uk_spiining_begin - 0x1000 &&
             lword < PLAT_MMU_VTEXT_BASE + uk_spinning_end - 0x1000) {
-            printf("Reloc text register X%d (0x%lx)\n", i, lword);
+            // printf("Reloc text register X%d (0x%lx)\n", i, lword);
             lword += CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP;
             if (will_wrap) {
                 lword -= uk_app_text_size;
@@ -79,7 +87,7 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
         if (will_wrap) {
             *entry -= uk_app_text_size;
         }
-        printf("Entry %d at 0x%lx is now 0x%lx\n", i, entry, *entry);
+        // printf("Entry %d at 0x%lx is now 0x%lx\n", i, entry, *entry);
     }
 
     extern unsigned long uk_so_wl_brk_instr;
@@ -93,13 +101,13 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
     asm volatile("mrs %0, elr_el1" : "=r"(pc));
     if (pc >= PLAT_MMU_VTEXT_BASE &&
         pc < (PLAT_MMU_VTEXT_BASE + 2 * uk_app_text_size)) {
-        printf("PC was 0x%lx\n", pc);
+        // printf("PC was 0x%lx\n", pc);
         pc += CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP;
         if (will_wrap) {
             pc -= uk_app_text_size;
         }
         asm volatile("msr elr_el1, %0" ::"r"(pc));
-        printf("PC is 0x%lx\n", pc);
+        // printf("PC is 0x%lx\n", pc);
     }
 
     // Walk down the stack if something needs to be fixed
@@ -107,10 +115,10 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
     asm volatile("mrs %0, sp_el0" : "=r"(sp));
     unsigned long mysp;
     asm volatile("mov %0, sp" : "=r"(mysp));
-    printf(
-        "Current sp is 0x%lx and my sp is at 0x%lx, while x29 points to "
-        "0x%lx\n",
-        sp, mysp, saved_stack_base[29]);
+    // printf(
+    //     "Current sp is 0x%lx and my sp is at 0x%lx, while x29 points to "
+    //     "0x%lx\n",
+    //     sp, mysp, saved_stack_base[29]);
     extern unsigned long __NVMSYMBOL__APPLICATION_STACK_END;
     unsigned long max_stack =
         (unsigned long)(&__NVMSYMBOL__APPLICATION_STACK_END);
@@ -131,13 +139,13 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
         sp += 8;
     }
 
-    printf("New text base at 0x%lx\n", uk_spiining_begin);
-
     // Implement the wraparound
     if (will_wrap) {
-        printf("TEXT Wraparound\n");
+        // printf("TEXT Wraparound\n");
         uk_spiining_begin -= uk_app_text_size;
         uk_spinning_end -= uk_app_text_size;
     }
+
+    printf("New text base at 0x%lx\n", uk_spiining_begin);
 }
 #endif
