@@ -72,7 +72,7 @@ void __WL_CODE uk_so_wl_init_wl_system(
 #endif
 
 #ifdef CONFIG_SEPARATE_TEXT_PAGETABLES
-    uk_so_wl_writemonitor_set_text_size((uk_spinning_end - uk_spiining_begin) >>
+    uk_so_wl_writemonitor_set_text_size((uk_text_end - uk_spiining_begin) >>
                                         12);
 #endif
 
