@@ -76,11 +76,13 @@ void __WL_CODE uk_so_wl_sb_relocate_from_irq(unsigned long *saved_stack_base) {
         // Check if the word has to be relocated
         if (lword < __current_stack_base_ptr && lword > __shadow_stack_begin) {
             lword -= CONFIG_SOFTONLYWEARLEVELINGLIB_STACK_MOVEMENT_STEP;
+            // printf("Reloc sw 0x%lx\n", lword);
         }
         // Check if the word is in the shadow
         if (will_wrap && lword < __virtual_stack_begin &&
             lword >= __shadow_stack_begin) {
             lword += CONFIG_APPLICATION_STACK_SIZE;
+            // printf("Wrapping sw 0x%lx\n", lword);
         }
 #endif
         *((unsigned long
@@ -97,13 +99,15 @@ void __WL_CODE uk_so_wl_sb_relocate_from_irq(unsigned long *saved_stack_base) {
             // printf("Relocating X%d from 0x%lx to 0x%lx\n", i, lword,
             //        lword -
             //        CONFIG_SOFTONLYWEARLEVELINGLIB_STACK_MOVEMENT_STEP);
-            // lword -= CONFIG_SOFTONLYWEARLEVELINGLIB_STACK_MOVEMENT_STEP;
+            lword -= CONFIG_SOFTONLYWEARLEVELINGLIB_STACK_MOVEMENT_STEP;
+            // printf("Reloc sw 0x%lx\n", lword);
         }
         // Check if the word is in the shadow
         if (will_wrap && lword < __virtual_stack_begin &&
             lword >= __shadow_stack_begin) {
             // printf("Wrap\n");
             lword += CONFIG_APPLICATION_STACK_SIZE;
+            // printf("Wrapping sw 0x%lx\n", lword);
         }
         saved_stack_base[i] = lword;
     }

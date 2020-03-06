@@ -56,14 +56,14 @@ volatile unsigned int uk_so_wl_pause_reloc = 1;
 int tcounter = 0;
 
 int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
+    // printf("Overflow\n");
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
     if (uk_so_wl_pause_reloc) {
         // printf("Wrong overflow\n");
         arm64_pmc_write_event_counter(
             0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
         return 1;
     }
-    // printf("Overflow\n");
-#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
     // Figure out which counter overflowed
     unsigned int page_mode = 0;
     if (arm64_pmc_read_counter_overflow_bit(0)) {
