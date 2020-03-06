@@ -68,6 +68,8 @@ UK_PLAT_SYSCALL_HANDLER(0x42) {
     asm volatile("b uk_so_wl_exit_call_mark");
 }
 
+extern volatile unsigned int uk_so_wl_pause_reloc;
+
 void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
     printf("Jumping to el0 and call 0x%lx\n", call_param);
@@ -79,6 +81,7 @@ void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
     unsigned long el0_sp = (unsigned long)&__appstack_top;
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
     el0_sp = PLAT_MMU_VSTACK_BASE + 2 * (CONFIG_APPLICATION_STACK_SIZE);
+    el0_sp -= 64;
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
     printf("Setting EL0 stack to 0x%lx\n", el0_sp);
 #endif
@@ -145,6 +148,7 @@ void __WL_CODE uk_so_wl_switch_to_el0(void (*call_param)()) {
         :
         : "r"(call_param), "r"(el0_sp)
         : "x0", "x1");
+    uk_so_wl_pause_reloc = 1;
 }
 
 void uk_so_wl_kick_to_el1() { asm volatile("svc #0x42"); }

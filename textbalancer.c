@@ -1,7 +1,7 @@
 #include <arm/arm64/mmu.h>
 #include <uk_lib_so_wl/textbalancer.h>
 
-#define CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
+// #define CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
 
@@ -17,9 +17,9 @@ extern void uk_reloc_adjust_adrp(volatile unsigned int *instr,
                                  int number_pages);
 
 void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
-    printf("Triggered Text rebalance from 0x%lx to 0x%lx\n",
-           PLAT_MMU_VTEXT_BASE - 0x1000 + uk_spiining_begin,
-           PLAT_MMU_VTEXT_BASE - 0x1000 + uk_spinning_end);
+    // printf("Triggered Text rebalance from 0x%lx to 0x%lx\n",
+        //    PLAT_MMU_VTEXT_BASE - 0x1000 + uk_spiining_begin,
+        //    PLAT_MMU_VTEXT_BASE - 0x1000 + uk_spinning_end);
 
     int will_wrap = 0;
     if (PLAT_MMU_VTEXT_BASE + uk_spiining_begin +
@@ -124,7 +124,7 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
         (unsigned long)(&__NVMSYMBOL__APPLICATION_STACK_END);
 #ifdef CONFIG_SEPARATE_STACK_PAGETABLES
     // TODO adjust to real upper stack
-    max_stack = PLAT_MMU_VSTACK_BASE + 2 * APPLICATION_STACK_SIZE;
+    max_stack = PLAT_MMU_VSTACK_BASE + 2 * CONFIG_APPLICATION_STACK_SIZE;
 #endif
     while (sp < max_stack) {
         unsigned long *word = (unsigned long *)(sp);
@@ -146,6 +146,6 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
         uk_spinning_end -= uk_app_text_size;
     }
 
-    printf("New text base at 0x%lx\n", uk_spiining_begin);
+    // printf("New text base at 0x%lx\n", uk_spiining_begin);
 }
 #endif

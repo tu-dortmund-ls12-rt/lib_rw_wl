@@ -16,6 +16,14 @@ __WL_DATA;
 extern unsigned long __NVMSYMBOL__APPLICATION_DATA_BEGIN;
 extern unsigned long __NVMSYMBOL__APPLICATION_STACK_END;
 
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
+extern unsigned long uk_app_base;
+extern unsigned long uk_text_begin;
+extern unsigned long uk_text_end;
+
+extern unsigned long uk_app_text_size;
+#endif
+
 void __WL_CODE uk_so_wl_pb_initialize() {
     // Create nodes for all managed pages and add them to a tree
     unsigned long managed_pages_begin =
@@ -50,6 +58,21 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
     //        plat_mmu_get_pm_mapping(vm_page), target.phys_address,
     //        target.mapped_vm_page);
 
+unsigned long real_vm = (unsigned long)vm_page;
+
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
+    if (real_vm >= PLAT_MMU_VTEXT_BASE) {
+        if ((real_vm - PLAT_MMU_VTEXT_BASE < uk_app_text_size)) {
+            vm_page = (void *)(real_vm - PLAT_MMU_VTEXT_BASE + uk_app_base +
+                               uk_text_begin);
+        } else {
+            vm_page = (void *)(real_vm - PLAT_MMU_VTEXT_BASE -
+                               uk_app_text_size + uk_app_base + uk_text_begin);
+        }
+        // printf("Adjusting text page from 0x%lx to 0x%lx\n", real_vm,
+        // vm_page);
+    }
+#endif
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
     extern unsigned long __NVMSYMBOL__APPLICATION_STACK_BEGIN;
     unsigned long stack_begin =
@@ -57,8 +80,6 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
     extern unsigned long __NVMSYMBOL__APPLICATION_STACK_END;
     unsigned long stack_end =
         (unsigned long)&__NVMSYMBOL__APPLICATION_STACK_END;
-
-    unsigned long real_vm = (unsigned long)vm_page;
     if (real_vm >= PLAT_MMU_VSTACK_BASE) {
         if ((real_vm - PLAT_MMU_VSTACK_BASE < CONFIG_APPLICATION_STACK_SIZE)) {
             vm_page = (void *)(real_vm - PLAT_MMU_VSTACK_BASE + stack_begin);
@@ -88,7 +109,8 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
 
     // Determine the current physical address
     unsigned long physical_address;
-#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
+#if defined CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING || \
+    defined CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
     { physical_address = (unsigned long)plat_mmu_get_pm_mapping(real_vm); }
     // printf("PM of HOT 0x%lx\n", physical_address);
 #else
@@ -107,8 +129,8 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
     managed_pages[array_offset].value.mapped_vm_page = former_vm;
     target.mapped_vm_page = (unsigned long)vm_page;
 
-#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
     unsigned long real_former_vm = (unsigned long)former_vm;
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
     if (real_former_vm >= stack_begin && real_former_vm < stack_end) {
         former_vm =
             (void *)(real_former_vm - stack_begin + PLAT_MMU_VSTACK_BASE);
@@ -116,9 +138,21 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
     // printf("Remapping 0x%lx (fake 0x%lx) to 0x%lx (fake 0x%lx)\n", real_vm,
     //        vm_page, real_former_vm, former_vm);
 #endif
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
+    if (real_former_vm >= uk_app_base + uk_text_begin &&
+        real_former_vm < uk_app_base + uk_text_end) {
+        former_vm = (void *)(real_former_vm - (uk_app_base + uk_text_begin) +
+                             PLAT_MMU_VTEXT_BASE);
+        // printf("Adjusting target text from 0x%lx to 0x%lx\n", real_former_vm,
+        //        former_vm);
+    }
+    // printf("Remapping 0x%lx (fake 0x%lx) to 0x%lx (fake 0x%lx)\n", real_vm,
+    //        vm_page, real_former_vm, former_vm);
+#endif
 
 // Exchange pagetables
-#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
+#if defined CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING || \
+    defined CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
     plat_mmu_set_pm_mapping(real_vm, target.phys_address);
     plat_mmu_set_pm_mapping(former_vm, physical_address);
 #else
@@ -129,7 +163,8 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
     // Last copy the actual data
     unsigned long *n_page_ptr;
     unsigned long *o_page_ptr;
-#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
+#if defined CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING || \
+    defined CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
     n_page_ptr = (unsigned long *)real_vm;
     o_page_ptr = (unsigned long *)former_vm;
 #else

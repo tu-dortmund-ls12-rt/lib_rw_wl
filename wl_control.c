@@ -115,6 +115,8 @@ void __WL_CODE uk_so_wl_exit_wl_system() {
 
 void (*uk_so_wl_global_entry_store)();
 
+extern volatile unsigned int uk_so_wl_pause_reloc;
+
 void __WL_CODE uk_so_wl_start_benchmark_el0() {
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
     printf("Switched down to EL0\n");
@@ -123,6 +125,7 @@ void __WL_CODE uk_so_wl_start_benchmark_el0() {
     printf("EL0 sp is at 0x%lx\n", sp);
 #endif
 
+    uk_so_wl_pause_reloc = 0;
     uk_so_wl_global_entry_store();
 
     uk_so_wl_kick_to_el1();

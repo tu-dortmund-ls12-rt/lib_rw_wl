@@ -51,9 +51,18 @@ void uk_so_wl_restore_brk_instr();
 unsigned long uk_so_wl_brk_instr;
 unsigned long uk_so_wl_brk_word;
 
+volatile unsigned int uk_so_wl_pause_reloc = 1;
+
 int tcounter = 0;
 
 int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
+    if (uk_so_wl_pause_reloc) {
+        // printf("Wrong overflow\n");
+        arm64_pmc_write_event_counter(
+            0, 0xFFFFFFFF - CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_SAMPLING_RATE);
+        return 1;
+    }
+    // printf("Overflow\n");
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
     // Figure out which counter overflowed
     unsigned int page_mode = 0;
@@ -105,6 +114,7 @@ int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
                 if (uk_so_wl_read_count[number] >=
                     CONFIG_SOFTONLYWEARLEVELINGLIB_WRITE_NOTIFY_THRESHOLD) {
                     // Notify Wear Leveling
+                    // printf("Triggering estimated text reads to 0x%lx\n",pc);
 
                     uk_so_wl_pb_trigger_rebalance(pc);
 
@@ -249,7 +259,7 @@ uk_upper_level_page_fault_handler_r(unsigned long* register_stack) {
         extern unsigned long uk_app_text_size;
         if (far_el1 >= PLAT_MMU_VTEXT_BASE &&
             far_el1 < PLAT_MMU_VTEXT_BASE + 2 * uk_app_text_size) {
-            printf("RAccessing vtext page 0x%lx\n", far_el1);
+            // printf("RAccessing vtext page 0x%lx\n", far_el1);
             if ((far_el1 - PLAT_MMU_VTEXT_BASE) < uk_app_text_size) {
                 number = (far_el1 - PLAT_MMU_VTEXT_BASE) >> 12;
             } else {
