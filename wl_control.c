@@ -88,6 +88,10 @@ void __WL_CODE uk_so_wl_init_wl_system(
     plat_mmu_setup_text_pages();
 #endif
 
+#ifdef CONFIG_MAP_SPARE_VM_SPACE
+    plat_mmu_setup_sparevm_pages();
+#endif
+
     uk_so_wl_writemonitor_init();
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_LOGGING
