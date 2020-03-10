@@ -24,7 +24,7 @@ config SOFTONLYWEARLEVELINGLIB_DO_WRITE_LEVELING
     select SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
 
 config SOFTONLYWEARLEVELINGLIB_DO_READ_LEVELING
-    bool "so_wl_write_leveling: Determines if read leveling is performed"
+    bool "so_wl_read_leveling: Determines if read leveling is performed"
     default y
     select SOFTONLYWEARLEVELINGLIB_DO_READ_MONITORING
 
@@ -44,6 +44,11 @@ config SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
     default y
     select SEPARATE_TEXT_PAGETABLES
     select SOFTONLYWEARLEVELINGLIB_DO_WRITE_MONITORING
+
+config SOFTONLYWEARLEVELINGLIB_DO_TEXT_PAGE_CONSITENCY
+    bool "so_wl_text_page_consistency: Use the entire VM space (48bit) to maintain consistency accross movements"
+    default y
+    select SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
 
 endmenu
 

@@ -1,6 +1,7 @@
 #include <arm/arm64/mmu.h>
 #include <stdio.h>
 #include <uk_lib_so_wl/control_flow.h>
+#include <uk_lib_so_wl/vmwalker.h>
 #include <uk_lib_so_wl/wl_control.h>
 #include <uk_lib_so_wl/writemnitor.h>
 
@@ -97,8 +98,36 @@ void __WL_CODE uk_so_wl_init_wl_system(
 #endif
 
 #ifdef CONFIG_MAP_SPARE_VM_SPACE
+    extern unsigned long uk_so_wl_text_spare_vm_begin;
+
     plat_mmu_setup_sparevm_pages();
     uk_so_wl_invalidate_all();
+
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_PAGE_CONSITENCY
+
+    extern unsigned long uk_app_text_size;
+    extern unsigned long uk_app_got_size;
+
+    unsigned long number_text_pages = (uk_app_text_size) >> 12;
+    unsigned long number_got_pages = (uk_app_got_size) >> 12;
+    unsigned long total_pages = number_text_pages * 2 + number_got_pages;
+
+    // Map the free VM space to the text pages
+    unsigned long *map = (unsigned long *)(uk_so_wl_set_spare_mapping(
+        uk_so_wl_text_spare_vm_begin, uk_so_wl_text_spare_vm_begin,
+        total_pages));
+
+    // Populate with actual text pages
+    for (unsigned long i = 0; i < number_text_pages * 2; i++) {
+        map[i] |=
+            (uk_app_base + uk_text_begin) + (i % number_text_pages) * 4096;
+    }
+    for (unsigned long i = number_text_pages * 2; i < total_pages; i++) {
+        map[i] |=
+            (uk_app_base + uk_text_begin) + (i - number_text_pages) * 4096;
+    }
+#endif
+
 #endif
 }
 

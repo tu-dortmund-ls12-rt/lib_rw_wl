@@ -16,6 +16,11 @@ unsigned long plat_mmu_sparevm_l2_table[0x2000] __attribute((aligned(0x1000)));
 // Two pages for l3 tables, each entry points to 4KB
 unsigned long plat_mmu_sparevm_l3_table[0x2000] __attribute((aligned(0x1000)));
 
+/**
+ * Some logic specific variables
+ */
+unsigned long uk_so_wl_text_spare_vm_begin = CONFIG_SPARE_VM_BASE;
+
 unsigned long uk_so_wl_set_spare_mapping(unsigned long valid_base,
                                          unsigned long invalud_base,
                                          unsigned long number_valid_pages) {
@@ -67,8 +72,10 @@ unsigned long uk_so_wl_set_spare_mapping(unsigned long valid_base,
             (plat_mmu_sparevm_l3_table[i_l3_offset + i] & (0xFFFFFFFFF000));
     }
     // Invalidate old L3 entires
-    for (unsigned long i = 0; i < number_valid_pages; i++) {
-        plat_mmu_sparevm_l3_table[i_l3_offset + i] = (0);
+    if (valid_base != invalud_base) {
+        for (unsigned long i = 0; i < number_valid_pages; i++) {
+            plat_mmu_sparevm_l3_table[i_l3_offset + i] = (0);
+        }
     }
     plat_mmu_flush_tlb();
     return (unsigned long)(plat_mmu_sparevm_l3_table + l3_offset);
