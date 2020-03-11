@@ -49,6 +49,7 @@ config SOFTONLYWEARLEVELINGLIB_DO_TEXT_PAGE_CONSITENCY
     bool "so_wl_text_page_consistency: Use the entire VM space (48bit) to maintain consistency accross movements"
     default y
     select SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
+    select MAP_SPARE_VM_SPACE
 
 endmenu
 

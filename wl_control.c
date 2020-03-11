@@ -119,14 +119,18 @@ void __WL_CODE uk_so_wl_init_wl_system(
         uk_so_wl_text_spare_vm_begin, uk_so_wl_text_spare_vm_begin,
         total_pages));
 
+    printf("Map is at 0x%lx",map);
+
     // Populate with actual text pages
     for (unsigned long i = 0; i < number_text_pages * 2; i++) {
         map[i] |=
             (uk_app_base + uk_text_begin) + (i % number_text_pages) * 4096;
+        printf("Mapping text page %d to 0x%lx\n", i, map[i]);
     }
     for (unsigned long i = number_text_pages * 2; i < total_pages; i++) {
         map[i] |=
             (uk_app_base + uk_text_begin) + (i - number_text_pages) * 4096;
+        printf("Mapping got/plt page %d to 0x%lx\n", i, map[i]);
     }
 #endif
 
