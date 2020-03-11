@@ -198,7 +198,7 @@ uk_upper_level_page_fault_handler_w(unsigned long* register_stack) {
         if (uk_so_wl_text_overflow_count >=
             CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_NOTIFY_THRESHOLD) {
             uk_so_wl_text_overflow_count = 0;
-            // uk_so_wl_tb_text_from_irq(register_stack);
+            uk_so_wl_tb_text_from_irq(register_stack);
         }
 #endif
 

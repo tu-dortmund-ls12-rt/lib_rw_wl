@@ -81,7 +81,7 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
     if (real_vm >= text_begin_base + 2 * uk_app_text_size) {
         vm_page =
             (void *)(real_vm - text_begin_base + uk_app_base + uk_text_begin);
-        // printf("Adjusting text page from 0x%lx to 0x%lx\n", real_vm, vm_page);
+        printf("Adjusting text page from 0x%lx to 0x%lx\n", real_vm, vm_page);
     }
 #endif
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
@@ -165,10 +165,10 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
         // printf("Adjusting target got/plt from 0x%lx to 0x%lx\n", real_former_vm,
         //        former_vm);
     }
-    // printf(
-    //     "Remapping 0x%lx (fake 0x%lx) [0x%lx] to 0x%lx (fake 0x%lx) [0x%lx]\n",
-    //     real_vm, vm_page, plat_mmu_get_pm_mapping(vm_page), real_former_vm,
-    //     former_vm, plat_mmu_get_pm_mapping(former_vm));
+    printf(
+        "Remapping 0x%lx (fake 0x%lx) [0x%lx] to 0x%lx (fake 0x%lx) [0x%lx]\n",
+        real_vm, vm_page, plat_mmu_get_pm_mapping(vm_page), real_former_vm,
+        former_vm, plat_mmu_get_pm_mapping(former_vm));
 #endif
 
 // Exchange pagetables
