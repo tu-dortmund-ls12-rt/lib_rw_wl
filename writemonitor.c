@@ -98,10 +98,15 @@ int __WL_CODE uk_so_wl_writemonitor_handle_overflow(void* arg) {
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
         extern unsigned long uk_app_text_size;
-        if (pc >= PLAT_MMU_VTEXT_BASE + uk_app_text_size) {
+        unsigned long text_begin_base = PLAT_MMU_VTEXT_BASE;
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_PAGE_CONSITENCY
+        extern unsigned long uk_so_wl_text_spare_vm_begin;
+        text_begin_base = uk_so_wl_text_spare_vm_begin;
+#endif
+        if (pc >= text_begin_base + uk_app_text_size) {
             pc -= uk_app_text_size;
         }
-        unsigned long number = (pc - PLAT_MMU_VTEXT_BASE) >> 12;
+        unsigned long number = (pc - text_begin_base) >> 12;
 #else
         unsigned long number = (pc - uk_so_wl_monitor_offset) >> 12;
 #endif
@@ -172,13 +177,17 @@ uk_upper_level_page_fault_handler_w(unsigned long* register_stack) {
 #endif
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
         extern unsigned long uk_app_text_size;
-        if (far_el1 >= PLAT_MMU_VTEXT_BASE &&
-            far_el1 < PLAT_MMU_VTEXT_BASE + 2 * uk_app_text_size) {
-            if ((far_el1 - PLAT_MMU_VTEXT_BASE) < uk_app_text_size) {
-                number = (far_el1 - PLAT_MMU_VTEXT_BASE) >> 12;
+        unsigned long text_begin_base = PLAT_MMU_VTEXT_BASE;
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_PAGE_CONSITENCY
+        extern unsigned long uk_so_wl_text_spare_vm_begin;
+        text_begin_base = uk_so_wl_text_spare_vm_begin;
+#endif
+        if (far_el1 >= text_begin_base &&
+            far_el1 < text_begin_base + 2 * uk_app_text_size) {
+            if ((far_el1 - text_begin_base) < uk_app_text_size) {
+                number = (far_el1 - text_begin_base) >> 12;
             } else {
-                number =
-                    (far_el1 - PLAT_MMU_VTEXT_BASE - uk_app_text_size) >> 12;
+                number = (far_el1 - text_begin_base - uk_app_text_size) >> 12;
             }
             number += 0;
         }
@@ -257,14 +266,18 @@ uk_upper_level_page_fault_handler_r(unsigned long* register_stack) {
 #endif
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
         extern unsigned long uk_app_text_size;
-        if (far_el1 >= PLAT_MMU_VTEXT_BASE &&
-            far_el1 < PLAT_MMU_VTEXT_BASE + 2 * uk_app_text_size) {
+        unsigned long text_begin_base = PLAT_MMU_VTEXT_BASE;
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_PAGE_CONSITENCY
+        extern unsigned long uk_so_wl_text_spare_vm_begin;
+        text_begin_base = uk_so_wl_text_spare_vm_begin;
+#endif
+        if (far_el1 >= text_begin_base &&
+            far_el1 < text_begin_base + 2 * uk_app_text_size) {
             // printf("RAccessing vtext page 0x%lx\n", far_el1);
-            if ((far_el1 - PLAT_MMU_VTEXT_BASE) < uk_app_text_size) {
-                number = (far_el1 - PLAT_MMU_VTEXT_BASE) >> 12;
+            if ((far_el1 - text_begin_base) < uk_app_text_size) {
+                number = (far_el1 - text_begin_base) >> 12;
             } else {
-                number =
-                    (far_el1 - PLAT_MMU_VTEXT_BASE - uk_app_text_size) >> 12;
+                number = (far_el1 - text_begin_base - uk_app_text_size) >> 12;
             }
             number += 0;
         }
@@ -462,11 +475,16 @@ void __WL_CODE uk_so_wl_writemonitor_set_page_mode(int generate_interrupts) {
         if (i < uk_so_wl_stack_offset_pages) {
 #endif
 #ifdef CONFIG_SEPARATE_TEXT_PAGETABLES
+            unsigned long text_begin_base = PLAT_MMU_VTEXT_BASE;
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_PAGE_CONSITENCY
+            extern unsigned long uk_so_wl_text_spare_vm_begin;
+            text_begin_base = uk_so_wl_text_spare_vm_begin;
+#endif
             if (i < uk_so_wl_number_text_pages) {
                 // printf("Setting WP for 0x%lx\n",
-                //        PLAT_MMU_VTEXT_BASE + (i)*0x1000);
-                plat_mmu_set_access_permissions(
-                    (PLAT_MMU_VTEXT_BASE) + (i)*0x1000, permission, 1);
+                //        text_begin_base + (i)*0x1000);
+                plat_mmu_set_access_permissions((text_begin_base) + (i)*0x1000,
+                                                permission, 1);
             } else {
 #endif
                 // printf("Setting WP for 0x%lx\n",
