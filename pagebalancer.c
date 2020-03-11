@@ -20,6 +20,7 @@ extern unsigned long __NVMSYMBOL__APPLICATION_STACK_END;
 extern unsigned long uk_app_base;
 extern unsigned long uk_text_begin;
 extern unsigned long uk_text_end;
+extern unsigned long uk_data_begin;
 
 extern unsigned long uk_app_text_size;
 #endif
@@ -58,19 +59,29 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
     //        plat_mmu_get_pm_mapping(vm_page), target.phys_address,
     //        target.mapped_vm_page);
 
-unsigned long real_vm = (unsigned long)vm_page;
+    unsigned long real_vm = (unsigned long)vm_page;
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
-    if (real_vm >= PLAT_MMU_VTEXT_BASE) {
-        if ((real_vm - PLAT_MMU_VTEXT_BASE < uk_app_text_size)) {
-            vm_page = (void *)(real_vm - PLAT_MMU_VTEXT_BASE + uk_app_base +
+    unsigned long text_begin_base = PLAT_MMU_VTEXT_BASE;
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_PAGE_CONSITENCY
+    extern unsigned long uk_so_wl_text_spare_vm_begin;
+    text_begin_base = uk_so_wl_text_spare_vm_begin;
+#endif
+    if (real_vm >= text_begin_base &&
+        real_vm < text_begin_base + 2 * uk_app_text_size) {
+        if ((real_vm - text_begin_base < uk_app_text_size)) {
+            vm_page = (void *)(real_vm - text_begin_base + uk_app_base +
                                uk_text_begin);
         } else {
-            vm_page = (void *)(real_vm - PLAT_MMU_VTEXT_BASE -
-                               uk_app_text_size + uk_app_base + uk_text_begin);
+            vm_page = (void *)(real_vm - text_begin_base - uk_app_text_size +
+                               uk_app_base + uk_text_begin);
         }
-        // printf("Adjusting text page from 0x%lx to 0x%lx\n", real_vm,
-        // vm_page);
+        printf("Adjusting text page from 0x%lx to 0x%lx\n", real_vm, vm_page);
+    }
+    if (real_vm >= text_begin_base + 2 * uk_app_text_size) {
+        vm_page =
+            (void *)(real_vm - text_begin_base + uk_app_base + uk_text_begin);
+        printf("Adjusting text page from 0x%lx to 0x%lx\n", real_vm, vm_page);
     }
 #endif
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
@@ -119,8 +130,8 @@ unsigned long real_vm = (unsigned long)vm_page;
     unsigned int array_offset =
         (physical_address - managed_pages_begin) / 0x1000;
 
-    // log_info("[RMAP]: " << vm_page << "[" << hex << physical_address << "] ->
-    // "
+    // log_info("[RMAP]: " << vm_page << "[" << hex << physical_address << "]
+    // ->"
     //                     << hex << target.phys_address << "{" << hex
     //                     << target.mapped_vm_page << "}");
 
@@ -139,15 +150,25 @@ unsigned long real_vm = (unsigned long)vm_page;
     //        vm_page, real_former_vm, former_vm);
 #endif
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
+
     if (real_former_vm >= uk_app_base + uk_text_begin &&
         real_former_vm < uk_app_base + uk_text_end) {
         former_vm = (void *)(real_former_vm - (uk_app_base + uk_text_begin) +
-                             PLAT_MMU_VTEXT_BASE);
-        // printf("Adjusting target text from 0x%lx to 0x%lx\n", real_former_vm,
-        //        former_vm);
+                             text_begin_base);
+        printf("Adjusting target text from 0x%lx to 0x%lx\n", real_former_vm,
+               former_vm);
     }
-    // printf("Remapping 0x%lx (fake 0x%lx) to 0x%lx (fake 0x%lx)\n", real_vm,
-    //        vm_page, real_former_vm, former_vm);
+    if (real_former_vm >= uk_app_base + uk_text_end &&
+        real_former_vm < uk_app_base + uk_data_begin) {
+        former_vm = (void *)(real_former_vm - (uk_app_base + uk_text_begin) +
+                             text_begin_base + uk_app_text_size);
+        printf("Adjusting target got/plt from 0x%lx to 0x%lx\n", real_former_vm,
+               former_vm);
+    }
+    // printf(
+    //     "Remapping 0x%lx (fake 0x%lx) [0x%lx] to 0x%lx (fake 0x%lx) [0x%lx]\n",
+    //     real_vm, vm_page, plat_mmu_get_pm_mapping(vm_page), real_former_vm,
+    //     former_vm, plat_mmu_get_pm_mapping(former_vm));
 #endif
 
 // Exchange pagetables
@@ -192,6 +213,7 @@ unsigned long real_vm = (unsigned long)vm_page;
     target.access_count++;
     managed_pages[target_array_offset].value = target;
     uk_so_wl_rbtree_insert(&aes_tree, managed_pages + target_array_offset);
+    // printf("\n");
 }
 
 unsigned long __WL_CODE uk_so_wl_pb_get_rebalance_count() {

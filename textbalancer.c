@@ -17,9 +17,9 @@ extern void uk_reloc_adjust_adrp(volatile unsigned int *instr,
                                  int number_pages);
 
 void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
-    // printf("Triggered Text rebalance from 0x%lx to 0x%lx\n",
-    //    PLAT_MMU_VTEXT_BASE - 0x1000 + uk_spiining_begin,
-    //    PLAT_MMU_VTEXT_BASE - 0x1000 + uk_spinning_end);
+    printf("Triggered Text rebalance from 0x%lx to 0x%lx\n",
+       PLAT_MMU_VTEXT_BASE - 0x1000 + uk_spiining_begin,
+       PLAT_MMU_VTEXT_BASE - 0x1000 + uk_spinning_end);
 
     int will_wrap = 0;
     if (PLAT_MMU_VTEXT_BASE + uk_spiining_begin +

@@ -191,6 +191,9 @@ uk_upper_level_page_fault_handler_w(unsigned long* register_stack) {
             }
             number += 0;
         }
+        if (far_el1 >= text_begin_base + 2 * uk_app_text_size) {
+            number = (far_el1 - text_begin_base) >> 12;
+        }
         uk_so_wl_text_overflow_count++;
         if (uk_so_wl_text_overflow_count >=
             CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_NOTIFY_THRESHOLD) {
@@ -280,6 +283,9 @@ uk_upper_level_page_fault_handler_r(unsigned long* register_stack) {
                 number = (far_el1 - text_begin_base - uk_app_text_size) >> 12;
             }
             number += 0;
+        }
+        if (far_el1 >= text_begin_base + 2 * uk_app_text_size) {
+            number = (far_el1 - text_begin_base) >> 12;
         }
         uk_so_wl_text_overflow_count++;
         if (uk_so_wl_text_overflow_count >=
