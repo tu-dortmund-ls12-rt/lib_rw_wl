@@ -44,16 +44,16 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
     text_begin_base = uk_so_wl_text_spare_vm_begin;
 #endif
 
-    printf("Triggered Text rebalance from 0x%lx to 0x%lx\n",
-           text_begin_base - 0x1000 + uk_spiining_begin,
-           text_begin_base - 0x1000 + uk_spinning_end);
+    // printf("Triggered Text rebalance from 0x%lx to 0x%lx\n",
+    //        text_begin_base - 0x1000 + uk_spiining_begin,
+    //        text_begin_base - 0x1000 + uk_spinning_end);
 
     int will_wrap = 0;
     if (text_begin_base + uk_spiining_begin +
             CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP - 0x1000 >=
         text_begin_base + uk_app_text_size) {
         will_wrap = 1;
-        printf("Wrapping around");
+        // printf("Wrapping around");
     }
 
     // Move the text first
@@ -87,6 +87,22 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
         curr--;
     }
 
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_PAGE_CONSITENCY
+    // Patch at least X30, since this is the link register and definetly points
+    // to text
+    unsigned long lword = saved_stack_base[30];
+    if (lword >= SWITCHING_OLD_BASE + uk_spiining_begin - 0x1000 &&
+        lword < SWITCHING_OLD_BASE + uk_spinning_end - 0x1000) {
+        // printf("Reloc text register X%d (0x%lx)", i, lword);
+        lword +=
+            CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP + SWITCHING_REST;
+        if (will_wrap) {
+            lword -= uk_app_text_size;
+        }
+        // printf(" to 0x%lx\n", lword);
+        saved_stack_base[30] = lword;
+    }
+#else
     // Patch the register file, if any intermediate address calculation is in
     // progress right now
     for (unsigned long i = 0; i < 31; i++) {
@@ -103,11 +119,13 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
             saved_stack_base[i] = lword;
         }
     }
+#endif
 
     uk_spiining_begin += CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP;
     uk_spinning_end += CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP;
 
     // Relocate text references in binary
+    // Can happen irregardless of consitency method
     extern unsigned long app_internal_text_offsets_size;
     extern unsigned long app_internal_text_offsets[];
     for (unsigned long i = 1; i <= app_internal_text_offsets_size; i++) {
@@ -125,6 +143,7 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
         // printf("Entry %d at 0x%lx is now 0x%lx\n", i, entry, *entry);
     }
 
+    // Same
     extern unsigned long uk_so_wl_brk_instr;
     uk_so_wl_brk_instr +=
         CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP + SWITCHING_REST;
@@ -133,6 +152,7 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
     }
 
     // Maybe most important, fix the PC
+    // Can be done anyway
     unsigned long pc;
     asm volatile("mrs %0, elr_el1" : "=r"(pc));
     if (pc >= SWITCHING_OLD_BASE &&
@@ -150,12 +170,27 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
     // Walk down the stack if something needs to be fixed
     unsigned long sp;
     asm volatile("mrs %0, sp_el0" : "=r"(sp));
-    unsigned long mysp;
-    asm volatile("mov %0, sp" : "=r"(mysp));
-    // printf(
-    //     "Current sp is 0x%lx and my sp is at 0x%lx, while x29 points to "
-    //     "0x%lx\n",
-    //     sp, mysp, saved_stack_base[29]);
+
+#ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_PAGE_CONSITENCY
+    // Walk down the stack frames to fix at least the saved link registers
+    unsigned long *base_ptr = (unsigned long *)(saved_stack_base[29]);
+    while (base_ptr != 0) {
+        unsigned long lr = base_ptr[1];
+        // printf("Reloc at 0x%lx from 0x%lx", base_ptr, lr);
+        if (lr >= SWITCHING_OLD_BASE &&
+            lr < (SWITCHING_OLD_BASE + 2 * uk_app_text_size)) {
+            lr += CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP +
+                  SWITCHING_REST;
+            if (will_wrap) {
+                lr -= uk_app_text_size;
+            }
+        }
+        // printf(" to 0x%lx\n", lr);
+        base_ptr[1] = lr;
+        base_ptr = (unsigned long *)(base_ptr[0]);
+    }
+#else
+
     extern unsigned long __NVMSYMBOL__APPLICATION_STACK_END;
     unsigned long max_stack =
         (unsigned long)(&__NVMSYMBOL__APPLICATION_STACK_END);
@@ -179,6 +214,7 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
         }
         sp += 8;
     }
+#endif
 
     // Implement the wraparound
     if (will_wrap) {
@@ -187,10 +223,10 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
         uk_spinning_end -= uk_app_text_size;
     }
 
-    printf("New text base at 0x%lx\n", uk_spiining_begin);
+    // printf("New text base at 0x%lx\n", uk_spiining_begin);
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_PAGE_CONSITENCY
-    printf("Text VM begins at 0x%lx\n", uk_so_wl_text_spare_vm_begin);
+    // printf("Text VM begins at 0x%lx\n", uk_so_wl_text_spare_vm_begin);
 #endif
 }
 #endif
