@@ -200,7 +200,6 @@ void __WL_CODE uk_so_wl_prepare_wl_code_permissions() {
         plat_mmu_set_access_permissions(page, PLAT_MMU_PERMISSION_RW_FROM_OS,
                                         1);
     }
-
     start = uk_app_base + uk_text_end;
     stop = uk_app_base + uk_bss_end;
 

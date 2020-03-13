@@ -2,7 +2,7 @@
 #include <uk_lib_so_wl/textbalancer.h>
 #include <uk_lib_so_wl/vmwalker.h>
 
-#define CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
+// #define CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
 
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_SPINNING
 
