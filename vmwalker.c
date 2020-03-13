@@ -20,6 +20,7 @@ unsigned long plat_mmu_sparevm_l3_table[0x2000] __attribute((aligned(0x1000)));
  * Some logic specific variables
  */
 unsigned long uk_so_wl_text_spare_vm_begin = CONFIG_SPARE_VM_BASE;
+unsigned long uk_so_wl_text_spare_vm_size = 0;
 
 unsigned long uk_so_wl_set_spare_mapping(unsigned long valid_base,
                                          unsigned long invalud_base,
