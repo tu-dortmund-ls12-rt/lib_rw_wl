@@ -68,6 +68,10 @@ void uk_upper_level_data_abort_handler(unsigned long *register_stack) {
         if (elr >= uk_so_wl_text_spare_vm_begin &&
             elr < uk_so_wl_text_spare_vm_begin + 2 * uk_app_text_size) {
             // printf("Abort happened while app exec\n");
+            if (elr >= uk_so_wl_text_spare_vm_begin + uk_app_text_size) {
+                // Shift back to real
+                elr -= uk_app_text_size;
+            }
             unsigned long plain_instr =
                 ((elr - CONFIG_SPARE_VM_BASE) %
                  (uk_so_wl_text_spare_vm_size * 0x1000)) +
@@ -100,11 +104,25 @@ void uk_upper_level_data_abort_handler(unsigned long *register_stack) {
                 }
             } else {
                 unsigned int *instr_arr = ((unsigned int *)plain_instr);
+                extern unsigned long uk_spiining_begin;
+                extern unsigned long uk_so_wl_text_spare_vm_begin;
                 printf(
                     "ERROR: Invalid cannot parse current instruction type at "
                     "0x%lx (0x%x), plain instr is 0x%lx, far is 0x%lx, instr "
-                    "at elr is 0x0\n",
-                    elr, instr_arr[0], plain_instr, far);
+                    "at elr is 0x0. VM begins at 0x%lx, reloc offset is "
+                    "0x%lx\n",
+                    elr, instr_arr[0], plain_instr, far,
+                    uk_so_wl_text_spare_vm_begin, uk_spiining_begin);
+                unsigned long p_i_vm = plain_instr & ~(0xFFF);
+                unsigned long p_i_map = plat_mmu_get_pm_mapping(p_i_vm);
+
+                unsigned long e_i_vm = elr & ~(0xFFF);
+                unsigned long e_i_map = plat_mmu_get_pm_mapping(e_i_vm);
+
+                printf(
+                    "Error page is mapped to 0x%lx, while fix page is mapped "
+                    "to 0x%lx\n",
+                    e_i_map, p_i_map);
                 for (unsigned long i = 0; i < 128; i++) {
                     printf("0x%x\n", instr_arr[i]);
                 }
