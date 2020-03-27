@@ -334,7 +334,7 @@ void uk_so_wl_trap_next_instr() {
      * conditionals are not longer allowed in ARMv8, it cannot branche away,
      * thus we can simply modify the next instruction
      */
-    pc += 8;
+    pc += 4;
     unsigned long aligned_pc = pc & ~(0b111);
     int lower = (pc == aligned_pc);
     // printf("BRK will be at 0x%lx\n", pc);
@@ -351,7 +351,10 @@ void uk_so_wl_restore_brk_instr() {
     unsigned long pc;
     asm volatile("mrs %0, elr_el1" : "=r"(pc));
     if (pc != uk_so_wl_brk_instr) {
-        // uk_pr_err("ERROR, breakpoint at unexpected location\n");
+        uk_pr_err(
+            "ERROR, breakpoint at unexpected location, brk is at 0x%lx, but pc "
+            "is at 0x%lx\n",
+            uk_so_wl_brk_instr, pc);
         while (1)
             ;
     }

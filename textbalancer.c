@@ -145,10 +145,14 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
 
     // Same
     extern unsigned long uk_so_wl_brk_instr;
-    uk_so_wl_brk_instr +=
-        CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP + SWITCHING_REST;
-    if (will_wrap) {
-        uk_so_wl_brk_instr -= uk_app_text_size;
+    // Only fix the breakpoint if it is part of the text
+    if (uk_so_wl_brk_instr >= SWITCHING_OLD_BASE + uk_spiining_begin - 0x1000 &&
+        uk_so_wl_brk_instr < SWITCHING_OLD_BASE + uk_spinning_end - 0x1000) {
+        uk_so_wl_brk_instr +=
+            CONFIG_SOFTONLYWEARLEVELINGLIB_TEXT_MOVEMENT_STEP + SWITCHING_REST;
+        if (will_wrap) {
+            uk_so_wl_brk_instr -= uk_app_text_size;
+        }
     }
 
     // Maybe most important, fix the PC

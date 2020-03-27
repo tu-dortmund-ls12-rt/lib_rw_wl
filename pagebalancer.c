@@ -76,12 +76,14 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
             vm_page = (void *)(real_vm - text_begin_base - uk_app_text_size +
                                uk_app_base + uk_text_begin);
         }
-        // printf("Adjusting text page from 0x%lx to 0x%lx\n", real_vm, vm_page);
+        // printf("Adjusting text page from 0x%lx to 0x%lx\n", real_vm,
+        // vm_page);
     }
     if (real_vm >= text_begin_base + 2 * uk_app_text_size) {
         vm_page =
             (void *)(real_vm - text_begin_base + uk_app_base + uk_text_begin);
-        // printf("Adjusting text page from 0x%lx to 0x%lx\n", real_vm, vm_page);
+        // printf("Adjusting text page from 0x%lx to 0x%lx\n", real_vm,
+        // vm_page);
     }
 #endif
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_STACK_SPINNING
@@ -91,7 +93,8 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
     extern unsigned long __NVMSYMBOL__APPLICATION_STACK_END;
     unsigned long stack_end =
         (unsigned long)&__NVMSYMBOL__APPLICATION_STACK_END;
-    if (real_vm >= PLAT_MMU_VSTACK_BASE) {
+    if (real_vm >= PLAT_MMU_VSTACK_BASE &&
+        real_vm < PLAT_MMU_VSTACK_BASE + 2 * CONFIG_APPLICATION_STACK_SIZE) {
         if ((real_vm - PLAT_MMU_VSTACK_BASE < CONFIG_APPLICATION_STACK_SIZE)) {
             vm_page = (void *)(real_vm - PLAT_MMU_VSTACK_BASE + stack_begin);
         } else {
@@ -166,9 +169,9 @@ void __WL_CODE uk_so_wl_pb_trigger_rebalance(void *vm_page) {
         //        former_vm);
     }
     // printf(
-    //     "Remapping 0x%lx (fake 0x%lx) [0x%lx] to 0x%lx (fake 0x%lx) [0x%lx]\n",
-    //     real_vm, vm_page, plat_mmu_get_pm_mapping(vm_page), real_former_vm,
-    //     former_vm, plat_mmu_get_pm_mapping(former_vm));
+    //     "Remapping 0x%lx (fake 0x%lx) [0x%lx] to 0x%lx (fake 0x%lx)
+    //     [0x%lx]\n", real_vm, vm_page, plat_mmu_get_pm_mapping(vm_page),
+    //     real_former_vm, former_vm, plat_mmu_get_pm_mapping(former_vm));
 #endif
 
 // Exchange pagetables
