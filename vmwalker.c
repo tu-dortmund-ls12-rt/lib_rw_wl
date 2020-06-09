@@ -79,6 +79,8 @@ unsigned long uk_so_wl_set_spare_mapping(unsigned long valid_base,
         }
     }
     plat_mmu_flush_tlb();
+    extern void cache_maintenance();
+    cache_maintenance();
     return (unsigned long)(plat_mmu_sparevm_l3_table + l3_offset);
 }
 
@@ -91,6 +93,9 @@ void uk_so_wl_invalidate_all() {
         // Make it a block descriptor with no access permissions from EL0
         plat_mmu_sparevm_l3_table[i] = 0b00;
     }
+    plat_mmu_flush_tlb();
+    extern void cache_maintenance();
+    cache_maintenance();
 }
 
 #endif

@@ -117,12 +117,13 @@ void __WL_CODE uk_so_wl_init_wl_system(
     extern unsigned long uk_so_wl_text_spare_vm_size;
     uk_so_wl_text_spare_vm_size = total_pages;
 
+printf("Doing some page mapping\n");
     // Map the free VM space to the text pages
     unsigned long *map = (unsigned long *)(uk_so_wl_set_spare_mapping(
         uk_so_wl_text_spare_vm_begin, uk_so_wl_text_spare_vm_begin,
         total_pages));
 
-    // printf("Map is at 0x%lx",map);
+    printf("Map is at 0x%lx",map);
 
     // Populate with actual text pages
     for (unsigned long i = 0; i < number_text_pages * 2; i++) {
@@ -135,6 +136,8 @@ void __WL_CODE uk_so_wl_init_wl_system(
             (uk_app_base + uk_text_begin) + (i - number_text_pages) * 4096;
         // printf("Mapping got/plt page %d to 0x%lx\n", i, map[i]);
     }
+    extern void cache_maintenance();
+    cache_maintenance();
 #endif
 
 #endif

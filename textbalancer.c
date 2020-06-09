@@ -232,5 +232,8 @@ void __WL_CODE uk_so_wl_tb_text_from_irq(unsigned long *saved_stack_base) {
 #ifdef CONFIG_SOFTONLYWEARLEVELINGLIB_DO_TEXT_PAGE_CONSITENCY
     // printf("Text VM begins at 0x%lx\n", uk_so_wl_text_spare_vm_begin);
 #endif
+
+    extern void cache_maintenance();
+    cache_maintenance();
 }
 #endif

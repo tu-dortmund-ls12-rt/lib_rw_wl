@@ -345,6 +345,8 @@ void uk_so_wl_trap_next_instr() {
     *instr &= lower ? ~(0xFFFFFFFF) : ~(0xFFFFFFFF00000000);
     *instr |=
         lower ? (0xD4200000) : (0xD420000000000000);  // Store a breakpoint here
+    extern void cache_maintenance();
+    cache_maintenance();
 }
 
 void uk_so_wl_restore_brk_instr() {
@@ -361,6 +363,8 @@ void uk_so_wl_restore_brk_instr() {
     unsigned long aligned_pc = pc & ~(0b111);
     unsigned long* instr = (unsigned long*)aligned_pc;
     *instr = uk_so_wl_brk_word;
+    extern void cache_maintenance();
+    cache_maintenance();
 }
 
 void __WL_CODE uk_so_wl_writemonitor_init() {
